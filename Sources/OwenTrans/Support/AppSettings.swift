@@ -65,6 +65,21 @@ final class AppSettings: ObservableObject {
         didSet { defaults.set(saveFolderPath, forKey: Keys.saveFolder) }
     }
 
+    /// TTS 음성 식별자(nil 이면 시스템 기본 en-US).
+    @Published var ttsVoiceIdentifier: String? {
+        didSet { defaults.set(ttsVoiceIdentifier, forKey: Keys.ttsVoice) }
+    }
+
+    /// TTS 말하기 속도(0.0~1.0, 기본 0.5).
+    @Published var ttsRate: Double {
+        didSet { defaults.set(ttsRate, forKey: Keys.ttsRate) }
+    }
+
+    /// TTS 음높이/톤(0.5~2.0, 기본 1.0).
+    @Published var ttsPitch: Double {
+        didSet { defaults.set(ttsPitch, forKey: Keys.ttsPitch) }
+    }
+
     /// 실제 저장 위치(미지정 시 다운로드 폴더).
     var resolvedSaveFolderURL: URL {
         if let path = saveFolderPath, !path.isEmpty {
@@ -82,6 +97,9 @@ final class AppSettings: ObservableObject {
         static let autoHide = "overlayAutoHideSeconds"
         static let autoSave = "autoSaveMarkdown"
         static let saveFolder = "saveFolderPath"
+        static let ttsVoice = "ttsVoiceIdentifier"
+        static let ttsRate = "ttsRate"
+        static let ttsPitch = "ttsPitch"
     }
 
     private init() {
@@ -92,5 +110,8 @@ final class AppSettings: ObservableObject {
         self.overlayAutoHideSeconds = defaults.object(forKey: Keys.autoHide) as? Double ?? 4.0
         self.autoSaveMarkdown = defaults.object(forKey: Keys.autoSave) as? Bool ?? true
         self.saveFolderPath = defaults.string(forKey: Keys.saveFolder)
+        self.ttsVoiceIdentifier = defaults.string(forKey: Keys.ttsVoice)
+        self.ttsRate = defaults.object(forKey: Keys.ttsRate) as? Double ?? 0.5
+        self.ttsPitch = defaults.object(forKey: Keys.ttsPitch) as? Double ?? 1.0
     }
 }

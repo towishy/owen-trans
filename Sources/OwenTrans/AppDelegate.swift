@@ -6,6 +6,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItemController: StatusItemController!
     private var overlay: NotchOverlayController!
     private var pipeline: TranslationPipeline!
+    private var composer: ComposerPanelController!
     private var preferencesWindow: PreferencesWindowController?
     private var aboutWindow: AboutWindowController?
     private var setupWindow: SetupWindowController?
@@ -20,10 +21,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // 번역 파이프라인(오디오 → STT → Gemma → 오버레이).
         pipeline = TranslationPipeline(overlay: overlay)
 
+        // 회의용 플로팅 입력창(한글 → 영어 + 복사/음성).
+        composer = ComposerPanelController(translator: TranslatorFactory.make())
+
         // 메뉴바 상태 항목.
         statusItemController = StatusItemController(
             pipeline: pipeline,
             onOpenPreferences: { [weak self] in self?.openPreferences() },
+            onToggleComposer: { [weak self] in self?.composer.toggle() },
             onOpenSetup: { [weak self] in self?.openSetup(auto: false) },
             onOpenAbout: { [weak self] in self?.openAbout() },
             onQuit: { NSApp.terminate(nil) }

@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import AVFoundation
 
 /// 환경설정 화면. 모든 라벨은 나눔스퀘어 폰트.
 struct PreferencesView: View {
@@ -8,6 +9,7 @@ struct PreferencesView: View {
     @State private var devices: [AudioInputManager.Device] = []
     @State private var hasVirtualDevice = false
     @State private var showAudioGuide = false
+    @State private var voices: [AVSpeechSynthesisVoice] = []
 
     var body: some View {
         ScrollView {
@@ -90,6 +92,39 @@ struct PreferencesView: View {
 
             Divider()
 
+            sectionHeader("음성 출력 (TTS · 한→영 읽기)")
+            Picker("", selection: ttsVoiceBinding) {
+                Text("시스템 기본 (en-US)").font(.nanum(13)).tag(String?.none)
+                ForEach(voices, id: \.identifier) { voice in
+                    Text(TextToSpeech.displayName(voice)).font(.nanum(13)).tag(String?.some(voice.identifier))
+                }
+            }
+            .labelsHidden()
+
+            HStack {
+                Text("속도").font(.nanum(13)).frame(width: 40, alignment: .leading)
+                Slider(value: $settings.ttsRate, in: 0.3...0.65)
+                Text(String(format: "%.2f", settings.ttsRate))
+                    .font(.nanum(11, weight: .light)).frame(width: 40, alignment: .trailing)
+            }
+            HStack {
+                Text("톤").font(.nanum(13)).frame(width: 40, alignment: .leading)
+                Slider(value: $settings.ttsPitch, in: 0.5...2.0)
+                Text(String(format: "%.2f", settings.ttsPitch))
+                    .font(.nanum(11, weight: .light)).frame(width: 40, alignment: .trailing)
+            }
+            HStack {
+                Spacer()
+                Button { SpeechPlayer.shared.speak("Hello, this is the OwenTrans voice preview.") } label: {
+                    Text("미리 듣기").font(.nanum(12))
+                }
+                Button { SpeechPlayer.shared.stop() } label: {
+                    Text("정지").font(.nanum(12))
+                }
+            }
+
+            Divider()
+
             sectionHeader("번역 기록 저장")
             Toggle(isOn: $settings.autoSaveMarkdown) {
                 Text("번역 내용을 Markdown 문서로 저장").font(.nanum(13))
@@ -139,6 +174,7 @@ struct PreferencesView: View {
         .onAppear {
             devices = AudioInputManager.availableInputDevices()
             hasVirtualDevice = devices.contains { $0.isVirtualLoopback }
+            voices = TextToSpeech.englishVoices()
         }
     }
 
@@ -180,6 +216,13 @@ struct PreferencesView: View {
         Binding(
             get: { settings.selectedInputDeviceUID },
             set: { settings.selectedInputDeviceUID = $0 }
+        )
+    }
+
+    private var ttsVoiceBinding: Binding<String?> {
+        Binding(
+            get: { settings.ttsVoiceIdentifier },
+            set: { settings.ttsVoiceIdentifier = $0 }
         )
     }
 

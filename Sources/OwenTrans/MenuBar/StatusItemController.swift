@@ -10,6 +10,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     private let statusItem: NSStatusItem
     private let pipeline: TranslationPipeline
     private let onOpenPreferences: () -> Void
+    private let onToggleComposer: () -> Void
     private let onOpenSetup: () -> Void
     private let onOpenAbout: () -> Void
     private let onQuit: () -> Void
@@ -18,11 +19,13 @@ final class StatusItemController: NSObject, NSMenuDelegate {
 
     init(pipeline: TranslationPipeline,
          onOpenPreferences: @escaping () -> Void,
+         onToggleComposer: @escaping () -> Void,
          onOpenSetup: @escaping () -> Void,
          onOpenAbout: @escaping () -> Void,
          onQuit: @escaping () -> Void) {
         self.pipeline = pipeline
         self.onOpenPreferences = onOpenPreferences
+        self.onToggleComposer = onToggleComposer
         self.onOpenSetup = onOpenSetup
         self.onOpenAbout = onOpenAbout
         self.onQuit = onQuit
@@ -87,6 +90,14 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         menu.addItem(modelItem)
 
         menu.addItem(.separator())
+
+        menu.addItem(.separator())
+
+        // 한글 → 영어 플로팅 입력창
+        let composer = NSMenuItem(title: "", action: #selector(toggleComposer), keyEquivalent: "")
+        composer.target = self
+        composer.applyNanumTitle("번역 입력창 (한→영)")
+        menu.addItem(composer)
 
         // 설치 마법사
         let setup = NSMenuItem(title: "", action: #selector(openSetup), keyEquivalent: "")
@@ -159,6 +170,10 @@ final class StatusItemController: NSObject, NSMenuDelegate {
 
     @objc private func openSetup() {
         onOpenSetup()
+    }
+
+    @objc private func toggleComposer() {
+        onToggleComposer()
     }
 
     @objc private func togglePause() {

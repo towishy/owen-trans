@@ -36,8 +36,8 @@ final class OllamaTranslator: Translator {
         }
     }
 
-    func translate(_ english: String) async throws -> String {
-        let trimmed = english.trimmingCharacters(in: .whitespacesAndNewlines)
+    func translate(_ text: String, direction: TranslationDirection) async throws -> String {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return "" }
 
         guard await isReachable() else {
@@ -50,7 +50,7 @@ final class OllamaTranslator: Translator {
 
         let body: [String: Any] = [
             "model": modelSize.ollamaTag,
-            "prompt": Self.buildPrompt(for: trimmed),
+            "prompt": Self.buildPrompt(for: trimmed, direction: direction),
             "stream": false,
             "options": ["temperature": 0.2]
         ]
@@ -85,20 +85,33 @@ final class OllamaTranslator: Translator {
         return decoded.models.map(\.name)
     }
 
-    private static func buildPrompt(for english: String) -> String {
-        """
-        You are a professional English→Korean interpreter.
-        Translate the following English speech into natural, fluent Korean.
-        Output ONLY the Korean translation. No explanation, no quotes, no romanization.
+    private static func buildPrompt(for text: String, direction: TranslationDirection) -> String {
+        switch direction {
+        case .enToKo:
+            return """
+            You are a professional English→Korean interpreter.
+            Translate the following English speech into natural, fluent Korean.
+            Output ONLY the Korean translation. No explanation, no quotes, no romanization.
 
-        English: \(english)
-        Korean:
-        """
+            English: \(text)
+            Korean:
+            """
+        case .koToEn:
+            return """
+            You are a professional Korean→English interpreter.
+            Translate the following Korean text into natural, fluent English.
+            Output ONLY the English translation. No explanation, no quotes.
+
+            Korean: \(text)
+            English:
+            """
+        }
     }
 
     private static func cleanup(_ text: String) -> String {
         text
             .replacingOccurrences(of: "Korean:", with: "")
+            .replacingOccurrences(of: "English:", with: "")
             .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }

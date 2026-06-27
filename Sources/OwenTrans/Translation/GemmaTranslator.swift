@@ -33,8 +33,8 @@ final class GemmaTranslator: Translator {
         statusText = "\(modelSize.displayName) 로딩 완료"
     }
 
-    func translate(_ english: String) async throws -> String {
-        let trimmed = english.trimmingCharacters(in: .whitespacesAndNewlines)
+    func translate(_ text: String, direction: TranslationDirection) async throws -> String {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return "" }
 
         if container == nil {
@@ -42,7 +42,7 @@ final class GemmaTranslator: Translator {
         }
         guard let container else { return "" }
 
-        let prompt = Self.buildPrompt(for: trimmed)
+        let prompt = Self.buildPrompt(for: trimmed, direction: direction)
 
         let result = try await container.perform { context in
             let input = try await context.processor.prepare(input: .init(prompt: prompt))
@@ -62,20 +62,33 @@ final class GemmaTranslator: Translator {
         return Self.cleanup(result)
     }
 
-    private static func buildPrompt(for english: String) -> String {
-        """
-        You are a professional English→Korean interpreter.
-        Translate the following English speech into natural, fluent Korean.
-        Output ONLY the Korean translation, with no explanation or quotes.
+    private static func buildPrompt(for text: String, direction: TranslationDirection) -> String {
+        switch direction {
+        case .enToKo:
+            return """
+            You are a professional English→Korean interpreter.
+            Translate the following English speech into natural, fluent Korean.
+            Output ONLY the Korean translation, with no explanation or quotes.
 
-        English: \(english)
-        Korean:
-        """
+            English: \(text)
+            Korean:
+            """
+        case .koToEn:
+            return """
+            You are a professional Korean→English interpreter.
+            Translate the following Korean text into natural, fluent English.
+            Output ONLY the English translation, with no explanation or quotes.
+
+            Korean: \(text)
+            English:
+            """
+        }
     }
 
     private static func cleanup(_ text: String) -> String {
         text
             .replacingOccurrences(of: "Korean:", with: "")
+            .replacingOccurrences(of: "English:", with: "")
             .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }
