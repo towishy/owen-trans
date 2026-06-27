@@ -34,10 +34,8 @@ final class StatusItemController: NSObject, NSMenuDelegate {
 
     private func configureButton() {
         guard let button = statusItem.button else { return }
-        let image = NSImage(systemSymbolName: "character.bubble",
-                            accessibilityDescription: "OwenTrans")
-        image?.isTemplate = true
-        button.image = image
+        // OWEN을 형상화한 커스텀 아이콘: "O" 링 + 음성 파형.
+        button.image = StatusItemIcon.make()
         button.toolTip = "OwenTrans — 실시간 영어→한글 번역"
     }
 
