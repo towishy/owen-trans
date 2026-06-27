@@ -8,6 +8,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var pipeline: TranslationPipeline!
     private var preferencesWindow: PreferencesWindowController?
     private var aboutWindow: AboutWindowController?
+    private var setupWindow: SetupWindowController?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // 나눔스퀘어 동봉 폰트 등록.
@@ -23,9 +24,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItemController = StatusItemController(
             pipeline: pipeline,
             onOpenPreferences: { [weak self] in self?.openPreferences() },
+            onOpenSetup: { [weak self] in self?.openSetup(auto: false) },
             onOpenAbout: { [weak self] in self?.openAbout() },
             onQuit: { NSApp.terminate(nil) }
         )
+
+        // 실행 시 의존성 점검 — 필수 항목이 부족하면 설치 마법사 자동 표시.
+        Task { await self.checkDependenciesOnLaunch() }
+    }
+
+    private func checkDependenciesOnLaunch() async {
+        let manager = DependencyManager()
+        await manager.checkAll()
+        if !manager.allRequiredSatisfied {
+            openSetup(auto: true)
+        }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -39,6 +52,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.activate(ignoringOtherApps: true)
         preferencesWindow?.showWindow(nil)
         preferencesWindow?.window?.makeKeyAndOrderFront(nil)
+    }
+
+    private func openSetup(auto: Bool = false) {
+        if setupWindow == nil {
+            setupWindow = SetupWindowController(onDone: { [weak self] in
+                self?.setupWindow = nil
+            })
+        }
+        NSApp.activate(ignoringOtherApps: true)
+        setupWindow?.showWindow(nil)
+        setupWindow?.window?.makeKeyAndOrderFront(nil)
     }
 
     private func openAbout() {

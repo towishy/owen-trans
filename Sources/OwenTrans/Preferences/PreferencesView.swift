@@ -9,7 +9,8 @@ struct PreferencesView: View {
     @State private var hasVirtualDevice = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
             sectionHeader("번역 모델")
             Picker("", selection: $settings.modelSize) {
                 ForEach(GemmaModelSize.allCases, id: \.self) { size in
@@ -122,10 +123,12 @@ struct PreferencesView: View {
             .disabled(!settings.autoSaveMarkdown)
             .opacity(settings.autoSaveMarkdown ? 1 : 0.5)
 
-            Spacer()
+            Spacer(minLength: 0)
+            }
+            .padding(24)
+            .frame(maxWidth: .infinity, alignment: .topLeading)
         }
-        .padding(24)
-        .frame(width: 460, height: 620, alignment: .topLeading)
+        .frame(width: 460, height: 620)
         .onAppear {
             devices = AudioInputManager.availableInputDevices()
             hasVirtualDevice = devices.contains { $0.isVirtualLoopback }

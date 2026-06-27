@@ -10,6 +10,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     private let statusItem: NSStatusItem
     private let pipeline: TranslationPipeline
     private let onOpenPreferences: () -> Void
+    private let onOpenSetup: () -> Void
     private let onOpenAbout: () -> Void
     private let onQuit: () -> Void
 
@@ -17,10 +18,12 @@ final class StatusItemController: NSObject, NSMenuDelegate {
 
     init(pipeline: TranslationPipeline,
          onOpenPreferences: @escaping () -> Void,
+         onOpenSetup: @escaping () -> Void,
          onOpenAbout: @escaping () -> Void,
          onQuit: @escaping () -> Void) {
         self.pipeline = pipeline
         self.onOpenPreferences = onOpenPreferences
+        self.onOpenSetup = onOpenSetup
         self.onOpenAbout = onOpenAbout
         self.onQuit = onQuit
         self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -85,6 +88,12 @@ final class StatusItemController: NSObject, NSMenuDelegate {
 
         menu.addItem(.separator())
 
+        // 설치 마법사
+        let setup = NSMenuItem(title: "", action: #selector(openSetup), keyEquivalent: "")
+        setup.target = self
+        setup.applyNanumTitle("설치 마법사…")
+        menu.addItem(setup)
+
         // 환경설정
         let prefs = NSMenuItem(title: "", action: #selector(openPreferences), keyEquivalent: ",")
         prefs.target = self
@@ -146,6 +155,10 @@ final class StatusItemController: NSObject, NSMenuDelegate {
 
     @objc private func startTranslation() {
         pipeline.start()
+    }
+
+    @objc private func openSetup() {
+        onOpenSetup()
     }
 
     @objc private func togglePause() {
