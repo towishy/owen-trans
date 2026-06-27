@@ -36,6 +36,24 @@ final class OllamaTranslator: Translator {
         }
     }
 
+    /// 모델을 메모리에 미리 올려 첫 번역의 콜드스타트 지연을 줄인다.
+    func warmUp() async {
+        guard await isReachable() else { return }
+        var request = URLRequest(url: baseURL.appendingPathComponent("api/generate"))
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let body: [String: Any] = [
+            "model": modelSize.ollamaTag,
+            "prompt": "Hi",
+            "stream": false,
+            // 모델만 로드하고 토큰 생성은 최소화.
+            "keep_alive": "30m",
+            "options": ["num_predict": 1]
+        ]
+        request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+        _ = try? await session.data(for: request)
+    }
+
     func translate(_ text: String, direction: TranslationDirection) async throws -> String {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return "" }
@@ -62,6 +80,53 @@ final class OllamaTranslator: Translator {
         }
         let decoded = try JSONDecoder().decode(OllamaGenerateResponse.self, from: data)
         return Self.cleanup(decoded.response)
+    }
+
+    /// 스트리밍 번역: NDJSON 응답을 줄 단위로 읽어 누적 텍스트를 콜백으로 전달한다.
+    func translateStream(_ text: String,
+                         direction: TranslationDirection,
+                         onPartial: @escaping (String) -> Void) async throws -> String {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return "" }
+
+        guard await isReachable() else {
+            let message = "〔Ollama 미실행〕 brew services start ollama"
+            onPartial(message)
+            return message
+        }
+
+        var request = URLRequest(url: baseURL.appendingPathComponent("api/generate"))
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let body: [String: Any] = [
+            "model": modelSize.ollamaTag,
+            "prompt": Self.buildPrompt(for: trimmed, direction: direction),
+            "stream": true,
+            "options": ["temperature": 0.2]
+        ]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (bytes, response) = try await session.bytes(for: request)
+        if let http = response as? HTTPURLResponse, http.statusCode == 404 {
+            let message = "〔모델 없음〕 ollama pull \(modelSize.ollamaTag)"
+            onPartial(message)
+            return message
+        }
+
+        var accumulated = ""
+        for try await line in bytes.lines {
+            guard !line.isEmpty, let lineData = line.data(using: .utf8),
+                  let chunk = try? JSONDecoder().decode(OllamaGenerateResponse.self, from: lineData) else {
+                continue
+            }
+            if !chunk.response.isEmpty {
+                accumulated += chunk.response
+                let cleaned = Self.cleanup(accumulated)
+                onPartial(cleaned)
+            }
+            if chunk.done == true { break }
+        }
+        return Self.cleanup(accumulated)
     }
 
     // MARK: - Helpers
@@ -118,6 +183,7 @@ final class OllamaTranslator: Translator {
 
 private struct OllamaGenerateResponse: Decodable {
     let response: String
+    let done: Bool?
 }
 
 private struct OllamaTagsResponse: Decodable {

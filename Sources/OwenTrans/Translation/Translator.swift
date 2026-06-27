@@ -26,6 +26,18 @@ extension Translator {
     func translate(_ english: String) async throws -> String {
         try await translate(english, direction: .enToKo)
     }
+
+    /// 모델 워밍업(콜드스타트 지연 제거). 기본 구현은 no-op.
+    func warmUp() async {}
+
+    /// 스트리밍 번역. 기본 구현은 비스트리밍으로 폴백(완성된 결과를 한 번에 전달).
+    func translateStream(_ text: String,
+                         direction: TranslationDirection,
+                         onPartial: @escaping (String) -> Void) async throws -> String {
+        let result = try await translate(text, direction: direction)
+        onPartial(result)
+        return result
+    }
 }
 
 /// 어떤 번역기를 쓸지 결정한다.

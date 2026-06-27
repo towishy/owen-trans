@@ -178,6 +178,8 @@ final class TranslationPipeline {
     private func prepareTranslatorIfNeeded() async {
         do {
             try await translator.prepare()
+            // 첫 번역 콜드스타트 지연 제거를 위해 모델을 미리 메모리에 올린다.
+            await translator.warmUp()
         } catch {
             NSLog("[OwenTrans] 번역기 준비 실패: \(error)")
         }
@@ -226,8 +228,18 @@ final class TranslationPipeline {
                 }
             }
             do {
-                let korean = try await self.translator.translate(text)
+                let korean = try await self.translator.translateStream(text, direction: .enToKo) { partial in
+                    // 단어 단위로 노치 오버레이를 실시간 갱신(지연 체감 ↓). 반드시 메인에서.
+                    guard !partial.isEmpty else { return }
+                    Task { @MainActor in
+                        guard self.isRunning, !self.isPaused else { return }
+                        self.overlay.show(original: self.settings.showsOriginalText ? text : "",
+                                          translation: partial,
+                                          autoHideAfter: nil)
+                    }
+                }
                 guard !korean.isEmpty else { return }
+                // 최종 결과로 자동 숨김 타이머를 시작하고 기록을 저장한다.
                 self.overlay.show(original: self.settings.showsOriginalText ? text : "",
                                   translation: korean,
                                   autoHideAfter: self.settings.overlayAutoHideSeconds)

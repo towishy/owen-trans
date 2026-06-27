@@ -1,4 +1,5 @@
 import AppKit
+import Carbon.HIToolbox
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -36,6 +37,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // 실행 시 의존성 점검 — 필수 항목이 부족하면 설치 마법사 자동 표시.
         Task { await self.checkDependenciesOnLaunch() }
+
+        registerGlobalHotKeys()
+    }
+
+    /// 전역 단축키: ⌥⌘T 번역 시작/정지, ⌥⌘I 번역 입력창 토글.
+    private func registerGlobalHotKeys() {
+        let optCmd = UInt32(optionKey | cmdKey)
+        // kVK_ANSI_T = 0x11, kVK_ANSI_I = 0x22
+        HotKeyCenter.shared.register(keyCode: 0x11, modifiers: optCmd) { [weak self] in
+            self?.pipeline.toggle()
+        }
+        HotKeyCenter.shared.register(keyCode: 0x22, modifiers: optCmd) { [weak self] in
+            self?.composer.toggle()
+        }
     }
 
     private func checkDependenciesOnLaunch() async {

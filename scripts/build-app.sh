@@ -7,6 +7,7 @@
 # 사용법:
 #   ./scripts/build-app.sh            # release 빌드 + .app 조립 + ad-hoc 서명
 #   ./scripts/build-app.sh --run      # 위 + 실행
+#   ./scripts/build-app.sh --install  # 위 + /Applications 로 설치(이동)
 
 set -euo pipefail
 
@@ -36,6 +37,11 @@ if [ -d "${BIN_PATH}/${APP_NAME}_${APP_NAME}.bundle" ]; then
   cp -R "${BIN_PATH}/${APP_NAME}_${APP_NAME}.bundle" "${RES_DIR}/"
 fi
 
+# 앱 아이콘 동봉(있으면).
+if [ -f "Resources/AppIcon.icns" ]; then
+  cp "Resources/AppIcon.icns" "${RES_DIR}/AppIcon.icns"
+fi
+
 echo "▶︎ ad-hoc 코드 서명 (마이크 entitlement 포함)…"
 codesign --force --deep \
   --sign - \
@@ -44,7 +50,19 @@ codesign --force --deep \
 
 echo "✓ 완료: ${APP_DIR}"
 
-if [[ "${1:-}" == "--run" ]]; then
+MODE="${1:-}"
+
+if [[ "${MODE}" == "--install" ]]; then
+  TARGET="/Applications/${APP_NAME}.app"
+  echo "▶︎ /Applications 로 설치…"
+  # 실행 중이면 종료.
+  pkill -x "${APP_NAME}" 2>/dev/null || true
+  rm -rf "${TARGET}"
+  cp -R "${APP_DIR}" "${TARGET}"
+  echo "✓ 설치됨: ${TARGET}"
+  echo "▶︎ 실행…"
+  open "${TARGET}"
+elif [[ "${MODE}" == "--run" ]]; then
   echo "▶︎ 실행…"
   open "${APP_DIR}"
 fi
