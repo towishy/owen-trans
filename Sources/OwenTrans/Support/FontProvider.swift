@@ -16,10 +16,10 @@ enum FontProvider {
         /// 우선순위 순서의 폰트 이름 후보.
         var candidates: [String] {
             switch self {
-            case .light:     return ["NanumSquareL", "NanumSquareOTFL", "NanumSquare Light", "NanumSquare"]
-            case .regular:   return ["NanumSquareR", "NanumSquareOTFR", "NanumSquare", "NanumSquare Regular"]
-            case .bold:      return ["NanumSquareB", "NanumSquareOTFB", "NanumSquare Bold", "NanumSquare"]
-            case .extraBold: return ["NanumSquareEB", "NanumSquareOTFEB", "NanumSquareExtraBold", "NanumSquare"]
+            case .light:     return ["NanumSquareOTF_acL", "NanumSquareL", "NanumSquareOTFL", "NanumSquare Light", "NanumSquare"]
+            case .regular:   return ["NanumSquareOTF_acR", "NanumSquareR", "NanumSquareOTFR", "NanumSquare", "NanumSquare Regular"]
+            case .bold:      return ["NanumSquareOTF_acB", "NanumSquareB", "NanumSquareOTFB", "NanumSquare Bold", "NanumSquare"]
+            case .extraBold: return ["NanumSquareOTF_acEB", "NanumSquareEB", "NanumSquareOTFEB", "NanumSquareExtraBold", "NanumSquare"]
             }
         }
 

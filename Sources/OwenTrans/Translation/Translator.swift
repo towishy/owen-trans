@@ -16,13 +16,18 @@ protocol Translator: AnyObject {
 }
 
 /// 어떤 번역기를 쓸지 결정한다.
+///
+/// 우선순위:
+/// 1. MLX(in-app Gemma) — 전체 Xcode 빌드 시
+/// 2. Ollama(로컬 Gemma 데몬) — Xcode 없이도 실제 번역 가능
+/// 3. Stub — 데모/폴백
 enum TranslatorFactory {
     @MainActor
     static func make() -> Translator {
         #if canImport(MLXLLM)
         return GemmaTranslator(modelSize: AppSettings.shared.modelSize)
         #else
-        return StubTranslator()
+        return OllamaTranslator(modelSize: AppSettings.shared.modelSize)
         #endif
     }
 }

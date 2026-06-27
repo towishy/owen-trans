@@ -20,6 +20,14 @@ enum GemmaModelSize: String, CaseIterable, Codable {
         case .gemma12B: return "mlx-community/gemma-3-12b-it-4bit"
         }
     }
+
+    /// Ollama 모델 태그. OllamaTranslator 에서 사용.
+    var ollamaTag: String {
+        switch self {
+        case .gemma4B:  return "gemma3:4b"
+        case .gemma12B: return "gemma3:12b"
+        }
+    }
 }
 
 /// 앱 전역 설정. UserDefaults 영속화.
