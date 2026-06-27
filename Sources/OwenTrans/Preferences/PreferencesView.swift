@@ -12,6 +12,7 @@ struct PreferencesView: View {
     @State private var voices: [AVSpeechSynthesisVoice] = []
     @State private var launchAtLogin = LoginItem.isEnabled
     @State private var loginItemError: String?
+    @ObservedObject private var modelManager = OllamaModelManager.shared
 
     var body: some View {
         ScrollView {
@@ -68,13 +69,16 @@ struct PreferencesView: View {
             Divider()
 
             sectionHeader("번역 모델")
-            Picker("", selection: $settings.modelSize) {
+            VStack(alignment: .leading, spacing: 10) {
                 ForEach(GemmaModelSize.allCases, id: \.self) { size in
-                    Text(size.displayName).font(.nanum(13)).tag(size)
+                    modelRow(size)
+                }
+                if !modelManager.reachable {
+                    Text("Ollama 서버가 꺼져 있어 설치 상태를 확인할 수 없습니다. 설치 마법사에서 서버를 시작하세요.")
+                        .font(.nanum(11, weight: .light))
+                        .foregroundStyle(.orange)
                 }
             }
-            .labelsHidden()
-            .pickerStyle(.radioGroup)
             .onChange(of: settings.modelSize) { _, _ in pipeline.reloadModel() }
 
             Divider()
@@ -251,6 +255,7 @@ struct PreferencesView: View {
             hasVirtualDevice = devices.contains { $0.isVirtualLoopback }
             voices = TextToSpeech.englishVoices()
             launchAtLogin = LoginItem.isEnabled
+            Task { await modelManager.refresh() }
         }
     }
 
@@ -273,6 +278,39 @@ struct PreferencesView: View {
 
     private func reregisterHotKeys() {
         (NSApp.delegate as? AppDelegate)?.registerGlobalHotKeys()
+    }
+
+    /// 모델 한 줄: 라디오 선택 + 이름 + 상태/다운로드 + 진행바.
+    @ViewBuilder
+    private func modelRow(_ size: GemmaModelSize) -> some View {
+        let installed = modelManager.isInstalled(size)
+        let isDownloading = modelManager.downloading.contains(size)
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 8) {
+                Image(systemName: settings.modelSize == size ? "largecircle.fill.circle" : "circle")
+                    .foregroundStyle(settings.modelSize == size ? Color.accentColor : .secondary)
+                    .onTapGesture { settings.modelSize = size }
+                Text(size.displayName).font(.nanum(13))
+                Spacer()
+                if isDownloading {
+                    Text(modelManager.progress[size] ?? "다운로드 중…")
+                        .font(.nanum(11, weight: .light)).foregroundStyle(.secondary)
+                } else if installed {
+                    Label("설치됨", systemImage: "checkmark.circle.fill")
+                        .font(.nanum(11)).foregroundStyle(.green).labelStyle(.titleAndIcon)
+                } else {
+                    Button { Task { await modelManager.download(size) } } label: {
+                        Label("다운로드", systemImage: "arrow.down.circle").font(.nanum(11))
+                    }
+                    .disabled(!modelManager.reachable)
+                }
+            }
+            if isDownloading {
+                ProgressView(value: modelManager.progressFraction[size] ?? 0)
+                    .progressViewStyle(.linear)
+                    .frame(height: 4)
+            }
+        }
     }
 
     private func previewNotch() {
