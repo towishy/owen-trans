@@ -11,6 +11,8 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     private let pipeline: TranslationPipeline
     private let onOpenPreferences: () -> Void
     private let onToggleComposer: () -> Void
+    private let onOpenHistory: () -> Void
+    private let onCheckUpdates: () -> Void
     private let onOpenSetup: () -> Void
     private let onOpenAbout: () -> Void
     private let onQuit: () -> Void
@@ -20,12 +22,16 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     init(pipeline: TranslationPipeline,
          onOpenPreferences: @escaping () -> Void,
          onToggleComposer: @escaping () -> Void,
+         onOpenHistory: @escaping () -> Void,
+         onCheckUpdates: @escaping () -> Void,
          onOpenSetup: @escaping () -> Void,
          onOpenAbout: @escaping () -> Void,
          onQuit: @escaping () -> Void) {
         self.pipeline = pipeline
         self.onOpenPreferences = onOpenPreferences
         self.onToggleComposer = onToggleComposer
+        self.onOpenHistory = onOpenHistory
+        self.onCheckUpdates = onCheckUpdates
         self.onOpenSetup = onOpenSetup
         self.onOpenAbout = onOpenAbout
         self.onQuit = onQuit
@@ -36,6 +42,9 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         let menu = NSMenu()
         menu.delegate = self
         statusItem.menu = menu
+
+        // 파이프라인 실행 상태를 메뉴바 아이콘 색으로 반영.
+        pipeline.onStateChange = { [weak self] in self?.refreshIcon() }
     }
 
     private func configureButton() {
@@ -43,6 +52,17 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         // OWEN을 형상화한 커스텀 아이콘: "O" 링 + 음성 파형.
         button.image = StatusItemIcon.make()
         button.toolTip = "OwenTrans — 실시간 영어→한글 번역"
+        refreshIcon()
+    }
+
+    /// 실행 상태에 따라 아이콘 색을 바꾼다(실행=초록, 일시정지=주황, 정지=기본).
+    private func refreshIcon() {
+        guard let button = statusItem.button else { return }
+        if pipeline.isRunning {
+            button.contentTintColor = pipeline.isPaused ? .systemOrange : .systemGreen
+        } else {
+            button.contentTintColor = nil
+        }
     }
 
     // 메뉴를 열 때마다 현재 상태로 다시 구성한다.
@@ -99,6 +119,12 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         composer.applyNanumTitle("번역 입력창 (한→영)")
         menu.addItem(composer)
 
+        // 번역 기록 보기
+        let history = NSMenuItem(title: "", action: #selector(openHistory), keyEquivalent: "")
+        history.target = self
+        history.applyNanumTitle("번역 기록 보기")
+        menu.addItem(history)
+
         // 설치 마법사
         let setup = NSMenuItem(title: "", action: #selector(openSetup), keyEquivalent: "")
         setup.target = self
@@ -116,6 +142,12 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         about.target = self
         about.applyNanumTitle("OwenTrans 정보")
         menu.addItem(about)
+
+        // 업데이트 확인
+        let update = NSMenuItem(title: "", action: #selector(checkUpdates), keyEquivalent: "")
+        update.target = self
+        update.applyNanumTitle("업데이트 확인…")
+        menu.addItem(update)
 
         menu.addItem(.separator())
 
@@ -174,6 +206,14 @@ final class StatusItemController: NSObject, NSMenuDelegate {
 
     @objc private func toggleComposer() {
         onToggleComposer()
+    }
+
+    @objc private func openHistory() {
+        onOpenHistory()
+    }
+
+    @objc private func checkUpdates() {
+        onCheckUpdates()
     }
 
     @objc private func togglePause() {

@@ -11,6 +11,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var preferencesWindow: PreferencesWindowController?
     private var aboutWindow: AboutWindowController?
     private var setupWindow: SetupWindowController?
+    private var historyWindow: HistoryWindowController?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // 나눔스퀘어 동봉 폰트 등록.
@@ -30,6 +31,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             pipeline: pipeline,
             onOpenPreferences: { [weak self] in self?.openPreferences() },
             onToggleComposer: { [weak self] in self?.composer.toggle() },
+            onOpenHistory: { [weak self] in self?.openHistory() },
+            onCheckUpdates: { UpdateChecker.check(userInitiated: true) },
             onOpenSetup: { [weak self] in self?.openSetup(auto: false) },
             onOpenAbout: { [weak self] in self?.openAbout() },
             onQuit: { NSApp.terminate(nil) }
@@ -39,6 +42,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Task { await self.checkDependenciesOnLaunch() }
 
         registerGlobalHotKeys()
+
+        // 조용한 자동 업데이트 확인(새 버전 있을 때만 알림).
+        UpdateChecker.check(userInitiated: false)
+    }
+
+    private func openHistory() {
+        if historyWindow == nil {
+            historyWindow = HistoryWindowController()
+        }
+        NSApp.activate(ignoringOtherApps: true)
+        historyWindow?.showWindow(nil)
+        historyWindow?.window?.makeKeyAndOrderFront(nil)
     }
 
     /// 환경설정의 단축키 설정으로 전역 단축키를 (재)등록한다.

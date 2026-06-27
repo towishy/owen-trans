@@ -7,9 +7,16 @@ import AppKit
 final class TranslationPipeline {
 
     /// 세션이 시작되어 있는지(종료 전).
-    private(set) var isRunning = false
+    private(set) var isRunning = false {
+        didSet { onStateChange?() }
+    }
     /// 일시정지 상태인지.
-    private(set) var isPaused = false
+    private(set) var isPaused = false {
+        didSet { onStateChange?() }
+    }
+
+    /// 실행/일시정지 상태가 바뀔 때 호출(메뉴바 아이콘 갱신 등).
+    var onStateChange: (() -> Void)?
 
     private let audio = AudioInputManager()
     private let speech = SpeechRecognizerService()
