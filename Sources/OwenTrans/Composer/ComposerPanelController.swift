@@ -23,6 +23,8 @@ final class ComposerPanelController {
             self?.hide()
         }))
         let panel = ComposerPanel(contentView: hosting)
+        // 창 위치·크기를 다음 실행까지 기억한다.
+        panel.setFrameAutosaveName("OwenTransComposerPanel")
         self.panel = panel
     }
 

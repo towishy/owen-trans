@@ -33,7 +33,7 @@ final class GemmaTranslator: Translator {
         statusText = "\(modelSize.displayName) 로딩 완료"
     }
 
-    func translate(_ text: String, direction: TranslationDirection) async throws -> String {
+    func translate(_ text: String, direction: TranslationDirection, context: [String]) async throws -> String {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return "" }
 
@@ -42,7 +42,7 @@ final class GemmaTranslator: Translator {
         }
         guard let container else { return "" }
 
-        let prompt = Self.buildPrompt(for: trimmed, direction: direction)
+        let prompt = Self.buildPrompt(for: trimmed, direction: direction, context: context)
 
         let result = try await container.perform { context in
             let input = try await context.processor.prepare(input: .init(prompt: prompt))
@@ -62,14 +62,19 @@ final class GemmaTranslator: Translator {
         return Self.cleanup(result)
     }
 
-    private static func buildPrompt(for text: String, direction: TranslationDirection) -> String {
+    private static func buildPrompt(for text: String, direction: TranslationDirection, context: [String]) -> String {
+        let contextBlock: String = {
+            let recent = context.suffix(3).filter { !$0.isEmpty }
+            guard !recent.isEmpty else { return "" }
+            return "Previous context (reference only):\n" + recent.map { "- \($0)" }.joined(separator: "\n") + "\n\n"
+        }()
         switch direction {
         case .enToKo:
             return """
             You are a professional English→Korean interpreter.
             Translate the following English speech into natural, fluent Korean.
             Output ONLY the Korean translation, with no explanation or quotes.
-
+            \(contextBlock)
             English: \(text)
             Korean:
             """
@@ -78,7 +83,7 @@ final class GemmaTranslator: Translator {
             You are a professional Korean→English interpreter.
             Translate the following Korean text into natural, fluent English.
             Output ONLY the English translation, with no explanation or quotes.
-
+            \(contextBlock)
             Korean: \(text)
             English:
             """

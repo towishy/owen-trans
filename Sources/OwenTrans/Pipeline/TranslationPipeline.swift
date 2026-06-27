@@ -26,6 +26,8 @@ final class TranslationPipeline {
     private var isTranslating = false
     /// partial 결과 디바운스 타이머(대기만 취소, 네트워크 호출은 취소하지 않음).
     private var debounceTask: Task<Void, Never>?
+    /// 문맥 유지 번역용 직전 원문(영어) 히스토리.
+    private var contextHistory: [String] = []
 
     var statusText: String {
         if isRunning {
@@ -158,6 +160,7 @@ final class TranslationPipeline {
         isPaused = false
         lastTranslatedSource = ""
         latestTranscript = ""
+        contextHistory.removeAll()
         logger.endSession()
         overlay.hide()
     }
@@ -228,7 +231,8 @@ final class TranslationPipeline {
                 }
             }
             do {
-                let korean = try await self.translator.translateStream(text, direction: .enToKo) { partial in
+                let contextArg = settings.useContextTranslation ? contextHistory : []
+                let korean = try await self.translator.translateStream(text, direction: .enToKo, context: contextArg) { partial in
                     // 단어 단위로 노치 오버레이를 실시간 갱신(지연 체감 ↓). 반드시 메인에서.
                     guard !partial.isEmpty else { return }
                     Task { @MainActor in
@@ -243,6 +247,11 @@ final class TranslationPipeline {
                 self.overlay.show(original: self.settings.showsOriginalText ? text : "",
                                   translation: korean,
                                   autoHideAfter: self.settings.overlayAutoHideSeconds)
+                // 문맥 히스토리 갱신(최근 3개 유지).
+                self.contextHistory.append(text)
+                if self.contextHistory.count > 3 {
+                    self.contextHistory.removeFirst(self.contextHistory.count - 3)
+                }
                 if self.settings.autoSaveMarkdown {
                     self.logger.append(original: text, korean: korean)
                 }

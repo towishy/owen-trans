@@ -54,7 +54,7 @@ final class OllamaTranslator: Translator {
         _ = try? await session.data(for: request)
     }
 
-    func translate(_ text: String, direction: TranslationDirection) async throws -> String {
+    func translate(_ text: String, direction: TranslationDirection, context: [String]) async throws -> String {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return "" }
 
@@ -68,7 +68,7 @@ final class OllamaTranslator: Translator {
 
         let body: [String: Any] = [
             "model": modelSize.ollamaTag,
-            "prompt": Self.buildPrompt(for: trimmed, direction: direction),
+            "prompt": Self.buildPrompt(for: trimmed, direction: direction, context: context),
             "stream": false,
             "options": ["temperature": 0.2]
         ]
@@ -85,6 +85,7 @@ final class OllamaTranslator: Translator {
     /// 스트리밍 번역: NDJSON 응답을 줄 단위로 읽어 누적 텍스트를 콜백으로 전달한다.
     func translateStream(_ text: String,
                          direction: TranslationDirection,
+                         context: [String],
                          onPartial: @escaping (String) -> Void) async throws -> String {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return "" }
@@ -100,7 +101,7 @@ final class OllamaTranslator: Translator {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         let body: [String: Any] = [
             "model": modelSize.ollamaTag,
-            "prompt": Self.buildPrompt(for: trimmed, direction: direction),
+            "prompt": Self.buildPrompt(for: trimmed, direction: direction, context: context),
             "stream": true,
             "options": ["temperature": 0.2]
         ]
@@ -150,14 +151,16 @@ final class OllamaTranslator: Translator {
         return decoded.models.map(\.name)
     }
 
-    private static func buildPrompt(for text: String, direction: TranslationDirection) -> String {
+    private static func buildPrompt(for text: String, direction: TranslationDirection, context: [String]) -> String {
+        let glossary = glossaryInstruction(direction: direction)
+        let contextBlock = contextInstruction(context, direction: direction)
         switch direction {
         case .enToKo:
             return """
             You are a professional English→Korean interpreter.
             Translate the following English speech into natural, fluent Korean.
             Output ONLY the Korean translation. No explanation, no quotes, no romanization.
-
+            \(glossary)\(contextBlock)
             English: \(text)
             Korean:
             """
@@ -166,11 +169,28 @@ final class OllamaTranslator: Translator {
             You are a professional Korean→English interpreter.
             Translate the following Korean text into natural, fluent English.
             Output ONLY the English translation. No explanation, no quotes.
-
+            \(glossary)\(contextBlock)
             Korean: \(text)
             English:
             """
         }
+    }
+
+    /// 직전 문장들을 문맥으로 제공(대명사·맥락 정확도 향상).
+    private static func contextInstruction(_ context: [String], direction: TranslationDirection) -> String {
+        let recent = context.suffix(3).filter { !$0.isEmpty }
+        guard !recent.isEmpty else { return "" }
+        let label = direction == .enToKo ? "Previous English context (for reference only, do NOT translate)" :
+                                           "Previous Korean context (for reference only, do NOT translate)"
+        return "\(label):\n" + recent.map { "- \($0)" }.joined(separator: "\n") + "\n\n"
+    }
+
+    /// 용어집을 고정 번역 규칙으로 제공.
+    private static func glossaryInstruction(direction: TranslationDirection) -> String {
+        let pairs = AppSettings.shared.glossaryPairs
+        guard !pairs.isEmpty else { return "" }
+        let rules = pairs.map { "\($0.0) → \($0.1)" }.joined(separator: ", ")
+        return "Always use these fixed translations: \(rules).\n"
     }
 
     private static func cleanup(_ text: String) -> String {

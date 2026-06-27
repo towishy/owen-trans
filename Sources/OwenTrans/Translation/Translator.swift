@@ -15,16 +15,22 @@ protocol Translator: AnyObject {
     func prepare() async throws
 
     /// 지정한 방향으로 텍스트를 번역.
-    func translate(_ text: String, direction: TranslationDirection) async throws -> String
+    /// - context: 직전 대화(원문 기준) 문장들 — 문맥 유지 번역에 사용.
+    func translate(_ text: String, direction: TranslationDirection, context: [String]) async throws -> String
 
     /// 사람이 읽을 수 있는 상태(로딩됨/로딩 중/미로딩 등).
     var statusText: String { get }
 }
 
 extension Translator {
-    /// 기존 호출 호환: 영어 → 한글.
+    /// 기존 호출 호환: 영어 → 한글, 문맥 없음.
     func translate(_ english: String) async throws -> String {
-        try await translate(english, direction: .enToKo)
+        try await translate(english, direction: .enToKo, context: [])
+    }
+
+    /// 방향만 지정(문맥 없음).
+    func translate(_ text: String, direction: TranslationDirection) async throws -> String {
+        try await translate(text, direction: direction, context: [])
     }
 
     /// 모델 워밍업(콜드스타트 지연 제거). 기본 구현은 no-op.
@@ -33,8 +39,9 @@ extension Translator {
     /// 스트리밍 번역. 기본 구현은 비스트리밍으로 폴백(완성된 결과를 한 번에 전달).
     func translateStream(_ text: String,
                          direction: TranslationDirection,
+                         context: [String],
                          onPartial: @escaping (String) -> Void) async throws -> String {
-        let result = try await translate(text, direction: direction)
+        let result = try await translate(text, direction: direction, context: context)
         onPartial(result)
         return result
     }

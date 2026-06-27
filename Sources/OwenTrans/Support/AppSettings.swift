@@ -80,6 +80,44 @@ final class AppSettings: ObservableObject {
         didSet { defaults.set(ttsPitch, forKey: Keys.ttsPitch) }
     }
 
+    /// 문맥 유지 번역(직전 문장을 프롬프트에 포함) 사용 여부.
+    @Published var useContextTranslation: Bool {
+        didSet { defaults.set(useContextTranslation, forKey: Keys.useContext) }
+    }
+
+    /// 용어집 텍스트. 한 줄에 "원문=번역" 형식.
+    @Published var glossaryText: String {
+        didSet { defaults.set(glossaryText, forKey: Keys.glossary) }
+    }
+
+    /// 전역 단축키: 번역 시작/정지 (keyCode, Carbon modifier 마스크).
+    @Published var hotKeyTranslateCode: Int {
+        didSet { defaults.set(hotKeyTranslateCode, forKey: Keys.hkTransCode) }
+    }
+    @Published var hotKeyTranslateMods: Int {
+        didSet { defaults.set(hotKeyTranslateMods, forKey: Keys.hkTransMods) }
+    }
+    /// 전역 단축키: 번역 입력창 토글.
+    @Published var hotKeyComposerCode: Int {
+        didSet { defaults.set(hotKeyComposerCode, forKey: Keys.hkCompCode) }
+    }
+    @Published var hotKeyComposerMods: Int {
+        didSet { defaults.set(hotKeyComposerMods, forKey: Keys.hkCompMods) }
+    }
+
+    /// 용어집을 (원문, 번역) 쌍으로 파싱.
+    var glossaryPairs: [(String, String)] {
+        glossaryText
+            .split(separator: "\n")
+            .compactMap { line in
+                let parts = line.split(separator: "=", maxSplits: 1).map {
+                    $0.trimmingCharacters(in: .whitespaces)
+                }
+                guard parts.count == 2, !parts[0].isEmpty, !parts[1].isEmpty else { return nil }
+                return (parts[0], parts[1])
+            }
+    }
+
     /// 실제 저장 위치(미지정 시 다운로드 폴더).
     var resolvedSaveFolderURL: URL {
         if let path = saveFolderPath, !path.isEmpty {
@@ -100,6 +138,12 @@ final class AppSettings: ObservableObject {
         static let ttsVoice = "ttsVoiceIdentifier"
         static let ttsRate = "ttsRate"
         static let ttsPitch = "ttsPitch"
+        static let useContext = "useContextTranslation"
+        static let glossary = "glossaryText"
+        static let hkTransCode = "hotKeyTranslateCode"
+        static let hkTransMods = "hotKeyTranslateMods"
+        static let hkCompCode = "hotKeyComposerCode"
+        static let hkCompMods = "hotKeyComposerMods"
     }
 
     private init() {
@@ -113,5 +157,12 @@ final class AppSettings: ObservableObject {
         self.ttsVoiceIdentifier = defaults.string(forKey: Keys.ttsVoice)
         self.ttsRate = defaults.object(forKey: Keys.ttsRate) as? Double ?? 0.5
         self.ttsPitch = defaults.object(forKey: Keys.ttsPitch) as? Double ?? 1.0
+        self.useContextTranslation = defaults.object(forKey: Keys.useContext) as? Bool ?? true
+        self.glossaryText = defaults.string(forKey: Keys.glossary) ?? ""
+        // 기본 단축키: ⌥⌘T(번역), ⌥⌘I(입력창). Carbon optionKey|cmdKey = 2304, T=0x11, I=0x22.
+        self.hotKeyTranslateCode = defaults.object(forKey: Keys.hkTransCode) as? Int ?? 0x11
+        self.hotKeyTranslateMods = defaults.object(forKey: Keys.hkTransMods) as? Int ?? 2304
+        self.hotKeyComposerCode = defaults.object(forKey: Keys.hkCompCode) as? Int ?? 0x22
+        self.hotKeyComposerMods = defaults.object(forKey: Keys.hkCompMods) as? Int ?? 2304
     }
 }

@@ -38,6 +38,15 @@ final class HotKeyCenter {
         return true
     }
 
+    /// 등록된 모든 단축키 해제(재등록 전 호출).
+    func unregisterAll() {
+        for (_, ref) in hotKeyRefs {
+            UnregisterEventHotKey(ref)
+        }
+        hotKeyRefs.removeAll()
+        handlers.removeAll()
+    }
+
     private func installEventHandler() {
         var spec = EventTypeSpec(eventClass: OSType(kEventClassKeyboard),
                                  eventKind: UInt32(kEventHotKeyPressed))

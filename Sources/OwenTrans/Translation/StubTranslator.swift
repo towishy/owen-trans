@@ -12,7 +12,7 @@ final class StubTranslator: Translator {
         statusText = "데모 번역기 준비됨"
     }
 
-    func translate(_ text: String, direction: TranslationDirection) async throws -> String {
+    func translate(_ text: String, direction: TranslationDirection, context: [String]) async throws -> String {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return "" }
         return "〔번역 미연결〕 \(trimmed)"

@@ -41,14 +41,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         registerGlobalHotKeys()
     }
 
-    /// 전역 단축키: ⌥⌘T 번역 시작/정지, ⌥⌘I 번역 입력창 토글.
-    private func registerGlobalHotKeys() {
-        let optCmd = UInt32(optionKey | cmdKey)
-        // kVK_ANSI_T = 0x11, kVK_ANSI_I = 0x22
-        HotKeyCenter.shared.register(keyCode: 0x11, modifiers: optCmd) { [weak self] in
+    /// 환경설정의 단축키 설정으로 전역 단축키를 (재)등록한다.
+    func registerGlobalHotKeys() {
+        let settings = AppSettings.shared
+        HotKeyCenter.shared.unregisterAll()
+        HotKeyCenter.shared.register(keyCode: UInt32(settings.hotKeyTranslateCode),
+                                     modifiers: UInt32(settings.hotKeyTranslateMods)) { [weak self] in
             self?.pipeline.toggle()
         }
-        HotKeyCenter.shared.register(keyCode: 0x22, modifiers: optCmd) { [weak self] in
+        HotKeyCenter.shared.register(keyCode: UInt32(settings.hotKeyComposerCode),
+                                     modifiers: UInt32(settings.hotKeyComposerMods)) { [weak self] in
             self?.composer.toggle()
         }
     }

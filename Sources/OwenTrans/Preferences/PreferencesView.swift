@@ -37,6 +37,36 @@ struct PreferencesView: View {
 
             Divider()
 
+            sectionHeader("단축키")
+            ShortcutRecorder(title: "번역 시작/정지",
+                             keyCode: $settings.hotKeyTranslateCode,
+                             modifiers: $settings.hotKeyTranslateMods) { reregisterHotKeys() }
+            ShortcutRecorder(title: "번역 입력창",
+                             keyCode: $settings.hotKeyComposerCode,
+                             modifiers: $settings.hotKeyComposerMods) { reregisterHotKeys() }
+
+            Divider()
+
+            sectionHeader("번역 품질")
+            Toggle(isOn: $settings.useContextTranslation) {
+                Text("문맥 유지 번역 (직전 문장 참고)").font(.nanum(13))
+            }
+            VStack(alignment: .leading, spacing: 4) {
+                Text("용어집 — 한 줄에 `원문=번역` (고정 번역)")
+                    .font(.nanum(12, weight: .light))
+                    .foregroundStyle(.secondary)
+                TextEditor(text: $settings.glossaryText)
+                    .font(.system(size: 12, design: .monospaced))
+                    .frame(height: 64)
+                    .padding(4)
+                    .background(RoundedRectangle(cornerRadius: 6).fill(Color(nsColor: .textBackgroundColor).opacity(0.6)))
+                Text("예) Hyundai=현대자동차")
+                    .font(.nanum(11, weight: .light))
+                    .foregroundStyle(.secondary)
+            }
+
+            Divider()
+
             sectionHeader("번역 모델")
             Picker("", selection: $settings.modelSize) {
                 ForEach(GemmaModelSize.allCases, id: \.self) { size in
@@ -217,6 +247,10 @@ struct PreferencesView: View {
     private func openAudioMIDISetup() {
         let url = URL(fileURLWithPath: "/System/Applications/Utilities/Audio MIDI Setup.app")
         NSWorkspace.shared.open(url)
+    }
+
+    private func reregisterHotKeys() {
+        (NSApp.delegate as? AppDelegate)?.registerGlobalHotKeys()
     }
 
     private func chooseSaveFolder() {
