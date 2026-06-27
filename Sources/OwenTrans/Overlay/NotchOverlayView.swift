@@ -39,7 +39,6 @@ struct NotchOverlayView: View {
                     NotchExtensionShape(cornerRadius: 26)
                         .stroke(.white.opacity(0.06), lineWidth: 1)
                 )
-                .shadow(color: .black.opacity(0.45), radius: 18, y: 8)
         )
         // 세로 높이만 내용에 맞춰 변함(최대 3줄).
         .fixedSize(horizontal: false, vertical: true)

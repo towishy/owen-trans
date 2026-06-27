@@ -105,7 +105,8 @@ final class NotchOverlayWindow: NSPanel {
         self.contentView = contentView
         self.isOpaque = false
         self.backgroundColor = .clear
-        self.hasShadow = true
+        // 창 자체의 사각형 그림자를 끈다(라운드 모서리에 사각 잔상이 생기는 원인).
+        self.hasShadow = false
         self.ignoresMouseEvents = true            // 클릭 통과
         self.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
         self.isFloatingPanel = true
