@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import AppKit
 
 /// Ollama·Gemma 모델·가상 오디오 장치 등 외부 의존성을 점검하고,
 /// 가능한 항목은 자동으로 설치·구성한다.
@@ -135,13 +136,17 @@ final class DependencyManager: ObservableObject {
             await refresh(.gemmaModel)
 
         case .virtualAudio:
-            appendLog("BlackHole은 시스템 확장이라 설치 중 보안 승인이 필요할 수 있습니다.")
-            await run("brew install blackhole-2ch", label: "BlackHole 설치")
+            appendLog("BlackHole은 CoreAudio 오디오 드라이버(HAL 플러그인)입니다.")
+            appendLog("‘시스템 확장’ 목록에는 나오지 않으며, 설치되면 곧바로 오디오 장치로 표시됩니다.")
+            appendLog("설치에는 관리자 권한(sudo)이 필요해 터미널에서 진행합니다 — 암호를 입력하세요.")
+            // cask 설치는 sudo 가 필요하므로 대화형 터미널에서 실행.
+            // 설치 후 자동으로 coreaudiod 를 재시작해 즉시 장치로 인식되게 한다.
+            runInTerminal("brew install blackhole-2ch && sudo killall coreaudiod")
+            appendLog("터미널 설치가 끝나면 ‘다시 점검’을 누르세요.")
+            appendLog("그다음 Audio MIDI 설정에서 ‘다중 출력 장치’(스피커+BlackHole)를 만들어 시스템 출력으로 지정하세요.")
+            // 다음 단계인 Audio MIDI 설정을 함께 연다.
+            openAudioMIDISetup()
             await refresh(.virtualAudio)
-            if states[.virtualAudio] != .satisfied {
-                appendLog("설치 후 시스템 설정 > 개인정보 보호 및 보안에서 확장을 승인하고,")
-                appendLog("Audio MIDI 설정에서 ‘다중 출력 장치’(스피커+BlackHole)를 만들어 출력으로 지정하세요.")
-            }
         }
     }
 
@@ -213,6 +218,25 @@ final class DependencyManager: ObservableObject {
                 }
             }
         }
+    }
+
+    /// Audio MIDI 설정을 연다(다중 출력 장치 구성 안내).
+    private func openAudioMIDISetup() {
+        let url = URL(fileURLWithPath: "/System/Applications/Utilities/Audio MIDI Setup.app")
+        if NSWorkspace.shared.open(url) {
+            appendLog("‘Audio MIDI 설정’을 열었습니다. ‘+’ → 다중 출력 장치로 스피커+BlackHole 을 묶으세요.")
+        }
+    }
+
+    /// 관리자 암호가 필요한 명령을 Terminal.app 에서 대화형으로 실행한다.
+    private func runInTerminal(_ command: String) {
+        let escaped = command.replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "\"", with: "\\\"")
+        let script = "tell application \"Terminal\"\nactivate\ndo script \"\(escaped)\"\nend tell"
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
+        process.arguments = ["-e", script]
+        try? process.run()
     }
 
     private func brewPath() -> String? {

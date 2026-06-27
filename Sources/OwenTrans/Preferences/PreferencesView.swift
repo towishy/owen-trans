@@ -7,6 +7,7 @@ struct PreferencesView: View {
     @ObservedObject private var settings = AppSettings.shared
     @State private var devices: [AudioInputManager.Device] = []
     @State private var hasVirtualDevice = false
+    @State private var showAudioGuide = false
 
     var body: some View {
         ScrollView {
@@ -63,6 +64,9 @@ struct PreferencesView: View {
                     }
                     Button { openAudioMIDISetup() } label: {
                         Text("Audio MIDI 설정 열기").font(.nanum(12))
+                    }
+                    Button { showAudioGuide = true } label: {
+                        Text("설정 가이드").font(.nanum(12, weight: .bold))
                     }
                 }
             }
@@ -129,6 +133,9 @@ struct PreferencesView: View {
             .frame(maxWidth: .infinity, alignment: .topLeading)
         }
         .frame(width: 460, height: 620)
+        .sheet(isPresented: $showAudioGuide) {
+            SystemAudioGuideView { showAudioGuide = false }
+        }
         .onAppear {
             devices = AudioInputManager.availableInputDevices()
             hasVirtualDevice = devices.contains { $0.isVirtualLoopback }

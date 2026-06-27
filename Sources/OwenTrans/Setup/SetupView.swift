@@ -4,6 +4,7 @@ import SwiftUI
 struct SetupView: View {
     @ObservedObject var manager: DependencyManager
     var onDone: () -> Void
+    @State private var showAudioGuide = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -79,6 +80,9 @@ struct SetupView: View {
         .padding(24)
         .frame(width: 520)
         .task { await manager.checkAll() }
+        .sheet(isPresented: $showAudioGuide) {
+            SystemAudioGuideView { showAudioGuide = false }
+        }
     }
 
     private func itemRow(_ item: DependencyManager.Item) -> some View {
@@ -100,6 +104,11 @@ struct SetupView: View {
                     .foregroundStyle(.secondary)
             }
             Spacer()
+            if item == .virtualAudio {
+                Button { showAudioGuide = true } label: {
+                    Text("설정 가이드").font(.nanum(11))
+                }
+            }
             if state != .satisfied {
                 Button { Task { await manager.install(item) } } label: {
                     Text(state == .working ? "진행 중…" : "설치").font(.nanum(11))
