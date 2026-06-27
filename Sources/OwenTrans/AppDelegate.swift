@@ -39,9 +39,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func checkDependenciesOnLaunch() async {
+        let key = "hasShownSetupWizard"
+        let firstRun = !UserDefaults.standard.bool(forKey: key)
         let manager = DependencyManager()
         await manager.checkAll()
-        if !manager.allRequiredSatisfied {
+        // 첫 실행 때는 항상, 이후에는 필수 항목이 부족할 때만 마법사를 띄운다.
+        if firstRun || !manager.allRequiredSatisfied {
+            UserDefaults.standard.set(true, forKey: key)
             openSetup(auto: true)
         }
     }

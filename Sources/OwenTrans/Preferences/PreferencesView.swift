@@ -10,10 +10,33 @@ struct PreferencesView: View {
     @State private var hasVirtualDevice = false
     @State private var showAudioGuide = false
     @State private var voices: [AVSpeechSynthesisVoice] = []
+    @State private var launchAtLogin = LoginItem.isEnabled
+    @State private var loginItemError: String?
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
+            sectionHeader("일반")
+            Toggle(isOn: $launchAtLogin) {
+                Text("로그인 시 자동 실행").font(.nanum(13))
+            }
+            .onChange(of: launchAtLogin) { _, newValue in
+                do {
+                    try LoginItem.setEnabled(newValue)
+                } catch {
+                    loginItemError = "로그인 항목 설정 실패: \(error.localizedDescription)"
+                    // 실패 시 토글 상태를 실제 값으로 되돌린다.
+                    launchAtLogin = LoginItem.isEnabled
+                }
+            }
+            if let loginItemError {
+                Text(loginItemError)
+                    .font(.nanum(11, weight: .light))
+                    .foregroundStyle(.orange)
+            }
+
+            Divider()
+
             sectionHeader("번역 모델")
             Picker("", selection: $settings.modelSize) {
                 ForEach(GemmaModelSize.allCases, id: \.self) { size in
@@ -175,6 +198,7 @@ struct PreferencesView: View {
             devices = AudioInputManager.availableInputDevices()
             hasVirtualDevice = devices.contains { $0.isVirtualLoopback }
             voices = TextToSpeech.englishVoices()
+            launchAtLogin = LoginItem.isEnabled
         }
     }
 
