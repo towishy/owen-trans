@@ -45,11 +45,25 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     func menuNeedsUpdate(_ menu: NSMenu) {
         menu.removeAllItems()
 
-        // 번역 시작/중지
-        let toggle = NSMenuItem(title: "", action: #selector(toggleTranslation), keyEquivalent: "")
-        toggle.target = self
-        toggle.applyNanumTitle(pipeline.isRunning ? "번역 중지" : "번역 시작", weight: .bold)
-        menu.addItem(toggle)
+        if pipeline.isRunning {
+            // 일시정지 / 재개
+            let pause = NSMenuItem(title: "", action: #selector(togglePause), keyEquivalent: "")
+            pause.target = self
+            pause.applyNanumTitle(pipeline.isPaused ? "재개" : "일시정지", weight: .bold)
+            menu.addItem(pause)
+
+            // 번역 종료
+            let stop = NSMenuItem(title: "", action: #selector(stopTranslation), keyEquivalent: "")
+            stop.target = self
+            stop.applyNanumTitle("번역 종료", weight: .bold)
+            menu.addItem(stop)
+        } else {
+            // 번역 시작
+            let startItem = NSMenuItem(title: "", action: #selector(startTranslation), keyEquivalent: "")
+            startItem.target = self
+            startItem.applyNanumTitle("번역 시작", weight: .bold)
+            menu.addItem(startItem)
+        }
 
         // 상태 표시(읽기 전용)
         let status = NSMenuItem(title: "", action: nil, keyEquivalent: "")
@@ -132,8 +146,16 @@ final class StatusItemController: NSObject, NSMenuDelegate {
 
     // MARK: - Actions
 
-    @objc private func toggleTranslation() {
-        pipeline.toggle()
+    @objc private func startTranslation() {
+        pipeline.start()
+    }
+
+    @objc private func togglePause() {
+        pipeline.togglePause()
+    }
+
+    @objc private func stopTranslation() {
+        pipeline.stop()
     }
 
     @objc private func selectDefaultDevice() {

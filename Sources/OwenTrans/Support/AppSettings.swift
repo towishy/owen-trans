@@ -55,11 +55,33 @@ final class AppSettings: ObservableObject {
         didSet { defaults.set(overlayAutoHideSeconds, forKey: Keys.autoHide) }
     }
 
+    /// 번역 내용을 Markdown 문서로 자동 저장할지 여부.
+    @Published var autoSaveMarkdown: Bool {
+        didSet { defaults.set(autoSaveMarkdown, forKey: Keys.autoSave) }
+    }
+
+    /// 저장 폴더 경로. nil/빈 값이면 다운로드 폴더에 저장한다.
+    @Published var saveFolderPath: String? {
+        didSet { defaults.set(saveFolderPath, forKey: Keys.saveFolder) }
+    }
+
+    /// 실제 저장 위치(미지정 시 다운로드 폴더).
+    var resolvedSaveFolderURL: URL {
+        if let path = saveFolderPath, !path.isEmpty {
+            return URL(fileURLWithPath: path, isDirectory: true)
+        }
+        let fm = FileManager.default
+        return fm.urls(for: .downloadsDirectory, in: .userDomainMask).first
+            ?? fm.homeDirectoryForCurrentUser
+    }
+
     private enum Keys {
         static let modelSize = "modelSize"
         static let inputDeviceUID = "inputDeviceUID"
         static let showsOriginal = "showsOriginalText"
         static let autoHide = "overlayAutoHideSeconds"
+        static let autoSave = "autoSaveMarkdown"
+        static let saveFolder = "saveFolderPath"
     }
 
     private init() {
@@ -68,5 +90,7 @@ final class AppSettings: ObservableObject {
         self.selectedInputDeviceUID = defaults.string(forKey: Keys.inputDeviceUID)
         self.showsOriginalText = defaults.object(forKey: Keys.showsOriginal) as? Bool ?? true
         self.overlayAutoHideSeconds = defaults.object(forKey: Keys.autoHide) as? Double ?? 4.0
+        self.autoSaveMarkdown = defaults.object(forKey: Keys.autoSave) as? Bool ?? true
+        self.saveFolderPath = defaults.string(forKey: Keys.saveFolder)
     }
 }

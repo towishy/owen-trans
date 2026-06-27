@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 /// 환경설정 화면. 모든 라벨은 나눔스퀘어 폰트.
 struct PreferencesView: View {
@@ -49,11 +50,67 @@ struct PreferencesView: View {
                     .frame(width: 48, alignment: .trailing)
             }
 
+            Divider()
+
+            sectionHeader("번역 기록 저장")
+            Toggle(isOn: $settings.autoSaveMarkdown) {
+                Text("번역 내용을 Markdown 문서로 저장").font(.nanum(13))
+            }
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text("저장 폴더")
+                    .font(.nanum(12, weight: .light))
+                    .foregroundStyle(.secondary)
+                HStack(spacing: 8) {
+                    Text(settings.resolvedSaveFolderURL.path)
+                        .font(.nanum(12))
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 5)
+                        .background(
+                            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                .fill(Color(nsColor: .textBackgroundColor).opacity(0.6))
+                        )
+                    Button { chooseSaveFolder() } label: {
+                        Text("폴더 선택…").font(.nanum(12))
+                    }
+                    Button { openSaveFolder() } label: {
+                        Text("열기").font(.nanum(12))
+                    }
+                    if settings.saveFolderPath?.isEmpty == false {
+                        Button { settings.saveFolderPath = nil } label: {
+                            Text("기본값").font(.nanum(12))
+                        }
+                    }
+                }
+            }
+            .disabled(!settings.autoSaveMarkdown)
+            .opacity(settings.autoSaveMarkdown ? 1 : 0.5)
+
             Spacer()
         }
         .padding(24)
-        .frame(width: 460, height: 380, alignment: .topLeading)
+        .frame(width: 460, height: 500, alignment: .topLeading)
         .onAppear { devices = AudioInputManager.availableInputDevices() }
+    }
+
+    private func chooseSaveFolder() {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.allowsMultipleSelection = false
+        panel.prompt = "선택"
+        panel.message = "번역 기록을 저장할 폴더를 선택하세요"
+        panel.directoryURL = settings.resolvedSaveFolderURL
+        if panel.runModal() == .OK, let url = panel.url {
+            settings.saveFolderPath = url.path
+        }
+    }
+
+    private func openSaveFolder() {
+        NSWorkspace.shared.open(settings.resolvedSaveFolderURL)
     }
 
     private var deviceBinding: Binding<String?> {

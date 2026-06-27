@@ -19,6 +19,21 @@ final class AudioInputManager {
     /// 마이크 입력 버퍼 콜백.
     var onBuffer: ((AVAudioPCMBuffer, AVAudioTime) -> Void)?
 
+    /// 마이크(TCC) 권한을 명시적으로 요청한다.
+    /// macOS 에서는 엔진만 시작하면 권한 프롬프트 없이 무음이 들어올 수 있으므로 필수.
+    static func requestMicrophoneAccess(_ completion: @escaping (Bool) -> Void) {
+        switch AVCaptureDevice.authorizationStatus(for: .audio) {
+        case .authorized:
+            completion(true)
+        case .notDetermined:
+            AVCaptureDevice.requestAccess(for: .audio) { granted in
+                DispatchQueue.main.async { completion(granted) }
+            }
+        default:
+            completion(false)
+        }
+    }
+
     // MARK: - 장치 열거
 
     /// 입력 가능한 오디오 장치 목록.
