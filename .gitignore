@@ -1,0 +1,26 @@
+# Swift / SPM
+.build/
+.swiftpm/
+Package.resolved
+
+# Xcode
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+DerivedData/
+*.xcuserstate
+
+# 빌드 산출물
+build/
+dist/
+*.app
+
+# 로컬 LLM / 모델 캐시 (대용량 — 커밋 금지)
+Models/
+*.gguf
+*.safetensors
+
+# macOS
+.DS_Store
+
+# 환경
+.env
