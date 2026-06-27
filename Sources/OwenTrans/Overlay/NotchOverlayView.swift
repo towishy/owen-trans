@@ -20,20 +20,18 @@ struct NotchOverlayView: View {
             Text(model.translation.isEmpty ? " " : model.translation)
                 .font(.nanum(17, weight: .bold))
                 .foregroundStyle(.white)
-                // 폰트를 줄이지 않는다: 짧으면 박스가 좁아지고,
-                // 길면 maxWidth 까지 옆으로 늘어난 뒤 줄바꿈한다.
+                // 고정 가로 폭 안에서 줄바꿈, 세로는 최대 3줄.
                 .lineLimit(3)
+                .truncationMode(.tail)
                 .fixedSize(horizontal: false, vertical: true)
         }
-        .frame(alignment: .leading)
-        // 한 줄 최대 너비(이보다 길면 줄바꿈). 창 너비는 컨트롤러가 내용에 맞게 조절.
-        .frame(maxWidth: NotchOverlayMetrics.maxContentWidth, alignment: .leading)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 22)
         // 상단은 화면 맨 위(노치/메뉴바)에 붙으므로, 텍스트가 가려지지 않도록 여백을 크게.
         .padding(.top, 40)
         .padding(.bottom, 18)
-        // 노치를 덮도록 검정 박스 자체에 최소 너비를 강제(짧은 문장도 노치만큼 넓게).
-        .frame(minWidth: model.minBoxWidth, alignment: .center)
+        // 환경설정에서 지정한 고정 가로 폭(동적 리사이즈 없음 → 눈 피로 감소).
+        .frame(width: model.boxWidth)
         .background(
             NotchExtensionShape(cornerRadius: 26)
                 .fill(.black.opacity(0.92))
@@ -43,19 +41,17 @@ struct NotchOverlayView: View {
                 )
                 .shadow(color: .black.opacity(0.45), radius: 18, y: 8)
         )
-        .fixedSize()
-        .animation(.easeInOut(duration: 0.18), value: model.translation)
+        // 세로 높이만 내용에 맞춰 변함(최대 3줄).
+        .fixedSize(horizontal: false, vertical: true)
+        .animation(.easeInOut(duration: 0.15), value: model.translation)
     }
 }
 
 /// 오버레이 레이아웃 공통 수치.
 enum NotchOverlayMetrics {
-    /// 한 줄 텍스트 최대 너비(이보다 길면 줄바꿈).
-    static let maxContentWidth: CGFloat = 560
-    /// 박스 최소 너비.
-    static let minBoxWidth: CGFloat = 300
-    /// 박스 최대 너비(메뉴바 좌우 메뉴 글자를 가리지 않도록 제한).
-    static let maxBoxWidth: CGFloat = 640
+    /// 가로 폭 슬라이더 범위.
+    static let minWidth: CGFloat = 320
+    static let maxWidth: CGFloat = 900
 }
 
 /// 노치가 아래로 확장된 듯한 모양: 상단은 평평(화면 최상단에 밀착),

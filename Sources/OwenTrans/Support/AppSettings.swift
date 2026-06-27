@@ -55,6 +55,11 @@ final class AppSettings: ObservableObject {
         didSet { defaults.set(overlayAutoHideSeconds, forKey: Keys.autoHide) }
     }
 
+    /// 노치 오버레이 가로 폭(고정). 동적 리사이즈 대신 이 값으로 고정한다.
+    @Published var notchWidth: Double {
+        didSet { defaults.set(notchWidth, forKey: Keys.notchWidth) }
+    }
+
     /// 번역 내용을 Markdown 문서로 자동 저장할지 여부.
     @Published var autoSaveMarkdown: Bool {
         didSet { defaults.set(autoSaveMarkdown, forKey: Keys.autoSave) }
@@ -133,6 +138,7 @@ final class AppSettings: ObservableObject {
         static let inputDeviceUID = "inputDeviceUID"
         static let showsOriginal = "showsOriginalText"
         static let autoHide = "overlayAutoHideSeconds"
+        static let notchWidth = "notchWidth"
         static let autoSave = "autoSaveMarkdown"
         static let saveFolder = "saveFolderPath"
         static let ttsVoice = "ttsVoiceIdentifier"
@@ -152,6 +158,7 @@ final class AppSettings: ObservableObject {
         self.selectedInputDeviceUID = defaults.string(forKey: Keys.inputDeviceUID)
         self.showsOriginalText = defaults.object(forKey: Keys.showsOriginal) as? Bool ?? true
         self.overlayAutoHideSeconds = defaults.object(forKey: Keys.autoHide) as? Double ?? 4.0
+        self.notchWidth = defaults.object(forKey: Keys.notchWidth) as? Double ?? 480
         self.autoSaveMarkdown = defaults.object(forKey: Keys.autoSave) as? Bool ?? true
         self.saveFolderPath = defaults.string(forKey: Keys.saveFolder)
         self.ttsVoiceIdentifier = defaults.string(forKey: Keys.ttsVoice)

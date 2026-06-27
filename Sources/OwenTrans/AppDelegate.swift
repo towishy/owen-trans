@@ -56,6 +56,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         historyWindow?.window?.makeKeyAndOrderFront(nil)
     }
 
+    /// 환경설정에서 노치 가로 폭 조절 시 실제 노치를 미리보기로 표시한다.
+    func previewNotchOverlay() {
+        overlay.previewWidth()
+    }
+
     /// 환경설정의 단축키 설정으로 전역 단축키를 (재)등록한다.
     func registerGlobalHotKeys() {
         let settings = AppSettings.shared

@@ -134,6 +134,20 @@ struct PreferencesView: View {
             }
 
             HStack {
+                Text("노치 가로 폭").font(.nanum(13)).frame(width: 90, alignment: .leading)
+                Slider(value: $settings.notchWidth, in: 320...900) { editing in
+                    // 조절 중·완료 시 실제 노치를 미리보기로 표시.
+                    previewNotch()
+                }
+                Text("\(Int(settings.notchWidth))")
+                    .font(.nanum(12, weight: .light)).frame(width: 44, alignment: .trailing)
+            }
+            .onChange(of: settings.notchWidth) { _, _ in previewNotch() }
+            Text("가로는 이 값으로 고정됩니다(동적 리사이즈 없음). 세로는 최대 3줄까지 표시.")
+                .font(.nanum(11, weight: .light))
+                .foregroundStyle(.secondary)
+
+            HStack {
                 Text("자동 숨김").font(.nanum(13))
                 Slider(value: $settings.overlayAutoHideSeconds, in: 0...10, step: 0.5)
                 Text(settings.overlayAutoHideSeconds == 0
@@ -251,6 +265,10 @@ struct PreferencesView: View {
 
     private func reregisterHotKeys() {
         (NSApp.delegate as? AppDelegate)?.registerGlobalHotKeys()
+    }
+
+    private func previewNotch() {
+        (NSApp.delegate as? AppDelegate)?.previewNotchOverlay()
     }
 
     private func chooseSaveFolder() {

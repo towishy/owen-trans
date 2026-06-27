@@ -13,6 +13,7 @@ final class NotchOverlayController {
     private var window: NotchOverlayWindow?
     private var hosting: NSHostingView<NotchOverlayView>?
     private var hideWorkItem: DispatchWorkItem?
+    private let settings = AppSettings.shared
 
     init() {
         buildWindow()
@@ -26,35 +27,21 @@ final class NotchOverlayController {
         repositionWindow()
     }
 
-    /// 내용 크기에 맞춰 창 너비를 정하고 화면 최상단 중앙(노치)에 밀착 배치한다.
-    /// 폰트는 줄이지 않고, 문장이 길면 박스가 옆으로 늘어난 뒤 줄바꿈한다.
-    /// 문장이 짧아도 검정 박스 최소 너비를 노치만큼 확보한다.
+    /// 환경설정에서 지정한 고정 가로 폭으로 창을 배치한다.
+    /// 가로는 고정(동적 리사이즈 없음), 세로 높이만 내용(최대 3줄)에 맞춰 변한다.
     func repositionWindow() {
         guard let window, let hosting, let screen = NSScreen.main else { return }
-        // 노치를 덮을 최소 박스 너비를 SwiftUI 쪽에 전달.
-        model.minBoxWidth = max(NotchOverlayMetrics.minBoxWidth, notchCoveringWidth(for: screen))
+        let frame = screen.frame
+        // 고정 가로 폭(화면 폭을 넘지 않게 클램프).
+        let width = min(max(CGFloat(settings.notchWidth), NotchOverlayMetrics.minWidth), frame.width - 24)
+        model.boxWidth = width
         hosting.layoutSubtreeIfNeeded()
         let fitting = hosting.fittingSize
-        let frame = screen.frame
-        let maxWidth = min(NotchOverlayMetrics.maxBoxWidth, frame.width - 40)
-        let width = min(fitting.width, maxWidth)
         let height = max(fitting.height, 60)
         let x = frame.midX - width / 2
         // 화면 물리적 최상단에 밀착(메뉴바/노치와 연결되는 느낌).
         let y = frame.maxY - height
         window.setFrame(NSRect(x: x, y: y, width: width, height: height), display: true)
-    }
-
-    /// 노치를 완전히 덮을 만큼의 너비(노치 너비 + 좌우 여유).
-    /// 노치가 없는 디스플레이면 0을 반환한다.
-    private func notchCoveringWidth(for screen: NSScreen) -> CGFloat {
-        guard let left = screen.auxiliaryTopLeftArea,
-              let right = screen.auxiliaryTopRightArea else {
-            return 0
-        }
-        let notchWidth = right.minX - left.maxX
-        guard notchWidth > 0 else { return 0 }
-        return notchWidth + 96 // 좌우로 48px씩 더 덮어 노치를 확실히 가린다.
     }
 
     // MARK: - 표시 API
@@ -63,7 +50,7 @@ final class NotchOverlayController {
         model.original = original
         model.translation = translation
         window?.orderFrontRegardless()
-        // SwiftUI 레이아웃 갱신 후 내용 크기에 맞춰 재배치.
+        // SwiftUI 레이아웃 갱신 후 높이만 재배치.
         DispatchQueue.main.async { [weak self] in self?.repositionWindow() }
         scheduleAutoHide(seconds)
     }
@@ -72,6 +59,15 @@ final class NotchOverlayController {
         model.original = text
         window?.orderFrontRegardless()
         DispatchQueue.main.async { [weak self] in self?.repositionWindow() }
+    }
+
+    /// 환경설정에서 가로 폭 조절 시 실제 노치를 미리보기로 표시한다.
+    func previewWidth() {
+        let sampleOriginal = "Preview of the notch overlay width and wrapping."
+        let sampleTranslation = "노치 오버레이 가로 폭 미리보기입니다. 이 길이로 줄바꿈과 박스 크기를 확인하세요. 세로는 최대 3줄까지 표시됩니다."
+        show(original: settings.showsOriginalText ? sampleOriginal : "",
+             translation: sampleTranslation,
+             autoHideAfter: 2.5)
     }
 
     func hide() {
@@ -92,8 +88,8 @@ final class NotchOverlayController {
 final class OverlayModel: ObservableObject {
     @Published var original: String = ""
     @Published var translation: String = ""
-    /// 검정 박스의 최소 너비(노치를 덮기 위해 컨트롤러가 설정).
-    @Published var minBoxWidth: CGFloat = NotchOverlayMetrics.minBoxWidth
+    /// 검정 박스의 고정 가로 폭(환경설정에서 지정).
+    @Published var boxWidth: CGFloat = 480
 }
 
 /// 클릭을 통과시키고, 모든 창 위에 떠 있는 보더리스 패널.
