@@ -49,6 +49,27 @@ chmod +x scripts/build-app.sh
 
 > Ollama 데몬이 꺼져 있거나 모델이 없으면 노치에 안내 메시지가 표시됩니다.
 
+## 시스템 오디오 캡처 (브라우저·YouTube 영상 번역)
+
+이 앱은 **입력 장치(마이크)** 의 소리를 인식합니다. 브라우저/YouTube 소리는 **출력(스피커)** 으로
+나가므로, 시스템 출력을 다시 입력으로 되돌려주는 **가상 오디오 장치**가 필요합니다.
+
+```bash
+# 1) BlackHole(무료 가상 오디오 장치) 설치
+brew install blackhole-2ch
+```
+
+2. **Audio MIDI 설정**(`/System/Applications/Utilities/Audio MIDI Setup.app`)에서
+   **다중 출력 장치**(Multi-Output Device)를 만들어 `스피커 + BlackHole`을 함께 체크 →
+   소리도 들으면서 BlackHole로 복사됩니다.
+3. 시스템 **출력**을 방금 만든 다중 출력 장치로 변경.
+4. OwenTrans **환경설정 → 음성 입력 장치**에서 **BlackHole 2ch**(‘시스템 오디오’ 표시) 선택.
+5. `번역 시작` → 브라우저에서 영어 영상 재생 → 노치에 한글 번역 표시.
+
+> 환경설정의 **시스템 오디오 캡처** 섹션에서 설치 명령 복사 · BlackHole 다운로드 ·
+> Audio MIDI 설정 열기를 바로 실행할 수 있습니다. 헤드폰만 쓰면 마이크가 소리를 못 줍는 점에
+> 유의하세요(가상 장치 경로를 권장).
+
 ## in-app MLX 번역 활성화 (전체 Xcode · 선택)
 
 Ollama 데몬 없이 앱이 직접 모델을 로딩하게 하려면 MLX 경로를 사용합니다.

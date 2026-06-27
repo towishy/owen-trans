@@ -11,6 +11,19 @@ final class AudioInputManager {
         let id: AudioDeviceID
         let uid: String
         let name: String
+
+        /// BlackHole·Loopback 등 시스템 오디오 캡처용 가상 장치인지.
+        var isVirtualLoopback: Bool {
+            let n = name.lowercased()
+            return ["blackhole", "loopback", "soundflower", "vb-cable", "vb cable",
+                    "aggregate", "multi-output", "multi output", "existential"]
+                .contains { n.contains($0) }
+        }
+    }
+
+    /// BlackHole 등 시스템 오디오 캡처용 가상 입력 장치가 설치되어 있는지.
+    static func hasVirtualLoopbackDevice() -> Bool {
+        availableInputDevices().contains { $0.isVirtualLoopback }
     }
 
     private let engine = AVAudioEngine()

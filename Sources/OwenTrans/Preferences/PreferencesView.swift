@@ -6,6 +6,7 @@ struct PreferencesView: View {
     let pipeline: TranslationPipeline
     @ObservedObject private var settings = AppSettings.shared
     @State private var devices: [AudioInputManager.Device] = []
+    @State private var hasVirtualDevice = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -25,12 +26,44 @@ struct PreferencesView: View {
             Picker("", selection: deviceBinding) {
                 Text("시스템 기본 입력").font(.nanum(13)).tag(String?.none)
                 ForEach(devices, id: \.uid) { device in
-                    Text(device.name).font(.nanum(13)).tag(String?.some(device.uid))
+                    Text(device.isVirtualLoopback ? "\(device.name) · 시스템 오디오" : device.name)
+                        .font(.nanum(13))
+                        .tag(String?.some(device.uid))
                 }
             }
             .labelsHidden()
             .onChange(of: settings.selectedInputDeviceUID) { _, _ in
                 pipeline.reloadInputDeviceIfRunning()
+            }
+
+            Divider()
+
+            sectionHeader("시스템 오디오 캡처 (브라우저·YouTube)")
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 6) {
+                    Image(systemName: hasVirtualDevice ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                        .foregroundStyle(hasVirtualDevice ? .green : .orange)
+                    Text(hasVirtualDevice
+                         ? "가상 오디오 장치 감지됨 — 위 목록에서 ‘시스템 오디오’ 장치를 선택하세요."
+                         : "브라우저 소리를 번역하려면 BlackHole 같은 가상 오디오 장치가 필요합니다.")
+                        .font(.nanum(12))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Text("① BlackHole 설치 → ② Audio MIDI 설정에서 ‘다중 출력 장치’(스피커+BlackHole) 생성 → ③ 출력을 다중 출력으로, 위 입력 장치를 BlackHole 로 선택")
+                    .font(.nanum(11, weight: .light))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                HStack(spacing: 8) {
+                    Button { copyInstallCommand() } label: {
+                        Text("설치 명령 복사").font(.nanum(12))
+                    }
+                    Button { openBlackHoleDownload() } label: {
+                        Text("BlackHole 다운로드").font(.nanum(12))
+                    }
+                    Button { openAudioMIDISetup() } label: {
+                        Text("Audio MIDI 설정 열기").font(.nanum(12))
+                    }
+                }
             }
 
             Divider()
@@ -92,8 +125,28 @@ struct PreferencesView: View {
             Spacer()
         }
         .padding(24)
-        .frame(width: 460, height: 500, alignment: .topLeading)
-        .onAppear { devices = AudioInputManager.availableInputDevices() }
+        .frame(width: 460, height: 620, alignment: .topLeading)
+        .onAppear {
+            devices = AudioInputManager.availableInputDevices()
+            hasVirtualDevice = devices.contains { $0.isVirtualLoopback }
+        }
+    }
+
+    private func copyInstallCommand() {
+        let pb = NSPasteboard.general
+        pb.clearContents()
+        pb.setString("brew install blackhole-2ch", forType: .string)
+    }
+
+    private func openBlackHoleDownload() {
+        if let url = URL(string: "https://existential.audio/blackhole/") {
+            NSWorkspace.shared.open(url)
+        }
+    }
+
+    private func openAudioMIDISetup() {
+        let url = URL(fileURLWithPath: "/System/Applications/Utilities/Audio MIDI Setup.app")
+        NSWorkspace.shared.open(url)
     }
 
     private func chooseSaveFolder() {
