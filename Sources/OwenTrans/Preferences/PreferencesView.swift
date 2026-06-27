@@ -148,6 +148,14 @@ struct PreferencesView: View {
                 .foregroundStyle(.secondary)
 
             HStack {
+                Text("노치 글자 크기").font(.nanum(13)).frame(width: 90, alignment: .leading)
+                Slider(value: $settings.notchFontSize, in: 12...26) { _ in previewNotch() }
+                Text("\(Int(settings.notchFontSize))pt")
+                    .font(.nanum(12, weight: .light)).frame(width: 44, alignment: .trailing)
+            }
+            .onChange(of: settings.notchFontSize) { _, _ in previewNotch() }
+
+            HStack {
                 Text("자동 숨김").font(.nanum(13))
                 Slider(value: $settings.overlayAutoHideSeconds, in: 0...10, step: 0.5)
                 Text(settings.overlayAutoHideSeconds == 0

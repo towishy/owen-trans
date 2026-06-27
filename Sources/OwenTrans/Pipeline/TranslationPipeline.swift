@@ -35,6 +35,9 @@ final class TranslationPipeline {
     private var debounceTask: Task<Void, Never>?
     /// 문맥 유지 번역용 직전 원문(영어) 히스토리.
     private var contextHistory: [String] = []
+    /// 동일 문장 재번역 방지용 캐시(LRU, 최대 200개).
+    private var translationCache: [String: String] = [:]
+    private var cacheOrder: [String] = []
 
     var statusText: String {
         if isRunning {
@@ -205,6 +208,30 @@ final class TranslationPipeline {
         }
     }
 
+    /// 번역을 1회 재시도와 함께 수행(일시적 네트워크 오류 대비).
+    private func translateWithRetry(_ text: String, context: [String],
+                                    onPartial: @escaping (String) -> Void) async throws -> String {
+        do {
+            return try await translator.translateStream(text, direction: .enToKo, context: context, onPartial: onPartial)
+        } catch {
+            // 일시 오류면 한 번 더 시도.
+            try? await Task.sleep(nanoseconds: 400_000_000)
+            return try await translator.translateStream(text, direction: .enToKo, context: context, onPartial: onPartial)
+        }
+    }
+
+    /// 번역 결과를 LRU 캐시에 저장(최대 200개).
+    private func cacheTranslation(_ source: String, _ result: String) {
+        if translationCache[source] == nil {
+            cacheOrder.append(source)
+            if cacheOrder.count > 200 {
+                let oldest = cacheOrder.removeFirst()
+                translationCache[oldest] = nil
+            }
+        }
+        translationCache[source] = result
+    }
+
     // MARK: - 인식 결과 처리
 
     private func handleTranscript(_ text: String, isFinal: Bool) {
@@ -248,8 +275,15 @@ final class TranslationPipeline {
                 }
             }
             do {
+                // 캐시 적중 시 즉시 표시(반복 표현 빠르게).
+                if let cached = self.translationCache[text] {
+                    self.overlay.show(original: self.settings.showsOriginalText ? text : "",
+                                      translation: cached,
+                                      autoHideAfter: self.settings.overlayAutoHideSeconds)
+                    return
+                }
                 let contextArg = settings.useContextTranslation ? contextHistory : []
-                let korean = try await self.translator.translateStream(text, direction: .enToKo, context: contextArg) { partial in
+                let korean = try await self.translateWithRetry(text, context: contextArg) { partial in
                     // 단어 단위로 노치 오버레이를 실시간 갱신(지연 체감 ↓). 반드시 메인에서.
                     guard !partial.isEmpty else { return }
                     Task { @MainActor in
@@ -264,6 +298,7 @@ final class TranslationPipeline {
                 self.overlay.show(original: self.settings.showsOriginalText ? text : "",
                                   translation: korean,
                                   autoHideAfter: self.settings.overlayAutoHideSeconds)
+                self.cacheTranslation(text, korean)
                 // 문맥 히스토리 갱신(최근 3개 유지).
                 self.contextHistory.append(text)
                 if self.contextHistory.count > 3 {

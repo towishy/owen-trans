@@ -1,15 +1,19 @@
 import Foundation
 import Combine
 
-/// 모델 크기 선택지.
+/// 모델 선택지(번역 LLM).
 enum GemmaModelSize: String, CaseIterable, Codable {
     case gemma4B = "gemma-3-4b"
     case gemma12B = "gemma-3-12b"
+    case qwen7B = "qwen2.5-7b"
+    case exaone8B = "exaone-3.5-7.8b"
 
     var displayName: String {
         switch self {
         case .gemma4B:  return "Gemma 3 · 4B (빠름)"
         case .gemma12B: return "Gemma 3 · 12B (정확)"
+        case .qwen7B:   return "Qwen 2.5 · 7B (한국어 강함)"
+        case .exaone8B: return "EXAONE 3.5 · 7.8B (한국어 특화)"
         }
     }
 
@@ -18,6 +22,8 @@ enum GemmaModelSize: String, CaseIterable, Codable {
         switch self {
         case .gemma4B:  return "mlx-community/gemma-3-4b-it-4bit"
         case .gemma12B: return "mlx-community/gemma-3-12b-it-4bit"
+        case .qwen7B:   return "mlx-community/Qwen2.5-7B-Instruct-4bit"
+        case .exaone8B: return "mlx-community/EXAONE-3.5-7.8B-Instruct-4bit"
         }
     }
 
@@ -26,6 +32,8 @@ enum GemmaModelSize: String, CaseIterable, Codable {
         switch self {
         case .gemma4B:  return "gemma3:4b"
         case .gemma12B: return "gemma3:12b"
+        case .qwen7B:   return "qwen2.5:7b"
+        case .exaone8B: return "exaone3.5:7.8b"
         }
     }
 }
@@ -58,6 +66,11 @@ final class AppSettings: ObservableObject {
     /// 노치 오버레이 가로 폭(고정). 동적 리사이즈 대신 이 값으로 고정한다.
     @Published var notchWidth: Double {
         didSet { defaults.set(notchWidth, forKey: Keys.notchWidth) }
+    }
+
+    /// 노치 오버레이 번역 글자 크기(pt).
+    @Published var notchFontSize: Double {
+        didSet { defaults.set(notchFontSize, forKey: Keys.notchFontSize) }
     }
 
     /// 번역 내용을 Markdown 문서로 자동 저장할지 여부.
@@ -139,6 +152,7 @@ final class AppSettings: ObservableObject {
         static let showsOriginal = "showsOriginalText"
         static let autoHide = "overlayAutoHideSeconds"
         static let notchWidth = "notchWidth"
+        static let notchFontSize = "notchFontSize"
         static let autoSave = "autoSaveMarkdown"
         static let saveFolder = "saveFolderPath"
         static let ttsVoice = "ttsVoiceIdentifier"
@@ -159,6 +173,7 @@ final class AppSettings: ObservableObject {
         self.showsOriginalText = defaults.object(forKey: Keys.showsOriginal) as? Bool ?? true
         self.overlayAutoHideSeconds = defaults.object(forKey: Keys.autoHide) as? Double ?? 4.0
         self.notchWidth = defaults.object(forKey: Keys.notchWidth) as? Double ?? 480
+        self.notchFontSize = defaults.object(forKey: Keys.notchFontSize) as? Double ?? 17
         self.autoSaveMarkdown = defaults.object(forKey: Keys.autoSave) as? Bool ?? true
         self.saveFolderPath = defaults.string(forKey: Keys.saveFolder)
         self.ttsVoiceIdentifier = defaults.string(forKey: Keys.ttsVoice)

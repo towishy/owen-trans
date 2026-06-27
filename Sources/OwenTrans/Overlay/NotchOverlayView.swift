@@ -18,7 +18,7 @@ struct NotchOverlayView: View {
                     .truncationMode(.head)
             }
             Text(model.translation.isEmpty ? " " : model.translation)
-                .font(.nanum(17, weight: .bold))
+                .font(.nanum(CGFloat(settings.notchFontSize), weight: .bold))
                 .foregroundStyle(.white)
                 // 고정 가로 폭 안에서 줄바꿈, 세로는 최대 3줄.
                 .lineLimit(3)

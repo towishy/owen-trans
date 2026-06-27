@@ -6,6 +6,7 @@ struct HistoryView: View {
     @State private var files: [URL] = []
     @State private var selected: URL?
     @State private var content: String = ""
+    @State private var searchText: String = ""
 
     var body: some View {
         HSplitView {
@@ -18,13 +19,20 @@ struct HistoryView: View {
                         .buttonStyle(.plain)
                 }
                 .padding(10)
+                HStack(spacing: 6) {
+                    Image(systemName: "magnifyingglass").foregroundStyle(.secondary).font(.system(size: 11))
+                    TextField("검색(파일명·내용)", text: $searchText)
+                        .textFieldStyle(.plain)
+                        .font(.nanum(12))
+                }
+                .padding(.horizontal, 10).padding(.bottom, 8)
                 Divider()
-                if files.isEmpty {
-                    Text("저장된 기록이 없습니다.")
+                if filteredFiles.isEmpty {
+                    Text(searchText.isEmpty ? "저장된 기록이 없습니다." : "검색 결과가 없습니다.")
                         .font(.nanum(12)).foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
-                    List(files, id: \.self, selection: $selected) { url in
+                    List(filteredFiles, id: \.self, selection: $selected) { url in
                         Text(displayName(url))
                             .font(.nanum(12))
                             .tag(url)
@@ -86,5 +94,18 @@ struct HistoryView: View {
         url.lastPathComponent
             .replacingOccurrences(of: "OwenTrans-번역기록-", with: "")
             .replacingOccurrences(of: ".md", with: "")
+    }
+
+    /// 검색어로 필터링한 파일 목록(파일명 또는 본문 내용 매칭).
+    private var filteredFiles: [URL] {
+        let query = searchText.trimmingCharacters(in: .whitespaces)
+        guard !query.isEmpty else { return files }
+        return files.filter { url in
+            if url.lastPathComponent.localizedCaseInsensitiveContains(query) { return true }
+            if let text = try? String(contentsOf: url, encoding: .utf8) {
+                return text.localizedCaseInsensitiveContains(query)
+            }
+            return false
+        }
     }
 }
