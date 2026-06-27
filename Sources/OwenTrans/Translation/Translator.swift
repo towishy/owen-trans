@@ -36,6 +36,11 @@ extension Translator {
     /// 모델 워밍업(콜드스타트 지연 제거). 기본 구현은 no-op.
     func warmUp() async {}
 
+    /// 필요한 모델이 없으면 다운로드해 사용 가능하게 만든다.
+    /// - onProgress: 진행 상황 메시지(노치 표시용).
+    /// - Returns: 사용 가능하면 true. 기본 구현은 true(다운로드 불필요).
+    func ensureModelAvailable(onProgress: @escaping (String) -> Void) async -> Bool { true }
+
     /// 스트리밍 번역. 기본 구현은 비스트리밍으로 폴백(완성된 결과를 한 번에 전달).
     func translateStream(_ text: String,
                          direction: TranslationDirection,

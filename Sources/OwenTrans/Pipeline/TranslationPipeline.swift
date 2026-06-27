@@ -188,8 +188,18 @@ final class TranslationPipeline {
     private func prepareTranslatorIfNeeded() async {
         do {
             try await translator.prepare()
-            // 첫 번역 콜드스타트 지연 제거를 위해 모델을 미리 메모리에 올린다.
-            await translator.warmUp()
+            // 모델이 없으면 자동 다운로드(진행률을 노치에 표시).
+            let available = await translator.ensureModelAvailable { [weak self] message in
+                Task { @MainActor in
+                    self?.overlay.show(original: "", translation: message, autoHideAfter: nil)
+                }
+            }
+            if available {
+                // 첫 번역 콜드스타트 지연 제거를 위해 모델을 미리 메모리에 올린다.
+                await translator.warmUp()
+            }
+            // 번역 세션이 아직 시작 전이면(모델 전환 등) 진행 메시지를 정리.
+            if !isRunning { overlay.hide() }
         } catch {
             NSLog("[OwenTrans] 번역기 준비 실패: \(error)")
         }

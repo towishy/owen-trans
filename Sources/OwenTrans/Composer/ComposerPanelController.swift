@@ -65,6 +65,11 @@ final class ComposerModel: ObservableObject {
         Task { @MainActor in
             defer { isTranslating = false }
             do {
+                // 모델이 없으면 자동 다운로드(진행률 표시).
+                let ok = await translator.ensureModelAvailable { [weak self] msg in
+                    Task { @MainActor in self?.statusMessage = msg }
+                }
+                guard ok else { statusMessage = "모델을 준비할 수 없습니다"; return }
                 let english = try await translator.translate(text, direction: .koToEn)
                 output = english
                 statusMessage = english.isEmpty ? "번역 결과 없음" : ""

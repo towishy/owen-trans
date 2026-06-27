@@ -11,6 +11,7 @@ final class OllamaTranslator: Translator {
 
     private let baseURL = URL(string: "http://localhost:11434")!
     private let session: URLSession
+    private let pullSession: URLSession
     private var modelSize: GemmaModelSize
     private(set) var statusText: String
 
@@ -20,6 +21,11 @@ final class OllamaTranslator: Translator {
         config.timeoutIntervalForRequest = 60
         config.timeoutIntervalForResource = 120
         self.session = URLSession(configuration: config)
+        // 모델 다운로드는 수 분~수십 분 걸릴 수 있으므로 긴 타임아웃.
+        let pullConfig = URLSessionConfiguration.default
+        pullConfig.timeoutIntervalForRequest = 120
+        pullConfig.timeoutIntervalForResource = 7200
+        self.pullSession = URLSession(configuration: pullConfig)
         self.statusText = "Ollama · \(modelSize.ollamaTag) 확인 중"
     }
 
@@ -52,6 +58,56 @@ final class OllamaTranslator: Translator {
         ]
         request.httpBody = try? JSONSerialization.data(withJSONObject: body)
         _ = try? await session.data(for: request)
+    }
+
+    /// 필요한 모델이 없으면 /api/pull 로 다운로드한다(진행률 콜백).
+    func ensureModelAvailable(onProgress: @escaping (String) -> Void) async -> Bool {
+        guard await isReachable() else { return false }
+        if await installedModels().contains(where: { $0.hasPrefix(modelSize.ollamaTag) }) {
+            return true
+        }
+        onProgress("모델 다운로드 준비 중… (\(modelSize.ollamaTag))")
+        return await pullModel(onProgress: onProgress)
+    }
+
+    /// /api/pull 스트리밍으로 모델을 내려받고 진행률을 보고한다.
+    private func pullModel(onProgress: @escaping (String) -> Void) async -> Bool {
+        var request = URLRequest(url: baseURL.appendingPathComponent("api/pull"))
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let body: [String: Any] = ["name": modelSize.ollamaTag, "stream": true]
+        request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+
+        do {
+            let (bytes, _) = try await pullSession.bytes(for: request)
+            for try await line in bytes.lines {
+                guard !line.isEmpty, let data = line.data(using: .utf8),
+                      let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+                    continue
+                }
+                if let error = json["error"] as? String {
+                    onProgress("다운로드 오류: \(error)")
+                    return false
+                }
+                let status = json["status"] as? String ?? ""
+                if let total = json["total"] as? Double, let completed = json["completed"] as? Double, total > 0 {
+                    let percent = Int(completed / total * 100)
+                    let gb = total / 1_000_000_000
+                    onProgress(String(format: "모델 다운로드 중… %d%% (%.1fGB)", percent, gb))
+                } else if !status.isEmpty {
+                    onProgress("모델 다운로드: \(status)")
+                }
+                if status == "success" {
+                    statusText = "Ollama · \(modelSize.ollamaTag) 준비됨"
+                    return true
+                }
+            }
+            // 스트림이 끝났는데 success 가 없으면 설치 여부 재확인.
+            return await installedModels().contains(where: { $0.hasPrefix(modelSize.ollamaTag) })
+        } catch {
+            onProgress("다운로드 실패: \(error.localizedDescription)")
+            return false
+        }
     }
 
     func translate(_ text: String, direction: TranslationDirection, context: [String]) async throws -> String {
