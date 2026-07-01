@@ -3,17 +3,17 @@ import Combine
 
 /// 모델 선택지(번역 LLM).
 enum GemmaModelSize: String, CaseIterable, Codable {
-    case gemma4B = "gemma-3-4b"
-    case gemma12B = "gemma-3-12b"
-    case qwen7B = "qwen2.5-7b"
-    case exaone8B = "exaone-3.5-7.8b"
+    case gemma3_4B = "gemma-3-4b"
+    case exaone4 = "exaone-4.0-1.2b"
+    case hyperclovax = "hyperclovax-seed-1.5b"
+    case kanana = "kanana-1.5-2.1b"
 
     var displayName: String {
         switch self {
-        case .gemma4B:  return "Gemma 3 · 4B (빠름·권장)"
-        case .gemma12B: return "Gemma 3 · 12B (정확)"
-        case .qwen7B:   return "Qwen 2.5 · 7B (한국어 강함)"
-        case .exaone8B: return "EXAONE 3.5 · 7.8B (한국어 특화)"
+        case .gemma3_4B:    return "Gemma 3 · 4B (안정·권장)"
+        case .exaone4:      return "EXAONE 4.0 · 1.2B (LG·최신·초경량)"
+        case .hyperclovax:  return "HyperCLOVAX SEED · 1.5B (Naver·한국어)"
+        case .kanana:       return "Kanana 1.5 · 2.1B (Kakao·한국어)"
         }
     }
 
@@ -21,20 +21,20 @@ enum GemmaModelSize: String, CaseIterable, Codable {
     /// (MLX 인프로세스 경로는 현재 비활성 — Ollama 경로 사용 시엔 참조되지 않음)
     var huggingFaceRepo: String {
         switch self {
-        case .gemma4B:  return "mlx-community/gemma-3-4b-it-4bit"
-        case .gemma12B: return "mlx-community/gemma-3-12b-it-4bit"
-        case .qwen7B:   return "mlx-community/Qwen2.5-7B-Instruct-4bit"
-        case .exaone8B: return "mlx-community/EXAONE-3.5-7.8B-Instruct-4bit"
+        case .gemma3_4B:    return "mlx-community/gemma-3-4b-it-4bit"
+        case .exaone4:      return "LGAI-EXAONE/EXAONE-4.0-1.2B"
+        case .hyperclovax:  return "naver-hyperclovax/HyperCLOVAX-SEED-Text-Instruct-1.5B"
+        case .kanana:       return "kakaocorp/kanana-1.5-2.1b-instruct-2505"
         }
     }
 
     /// Ollama 모델 태그. OllamaTranslator 에서 사용.
     var ollamaTag: String {
         switch self {
-        case .gemma4B:  return "gemma3:4b"
-        case .gemma12B: return "gemma3:12b"
-        case .qwen7B:   return "qwen2.5:7b"
-        case .exaone8B: return "exaone3.5:7.8b"
+        case .gemma3_4B:    return "gemma3:4b"
+        case .exaone4:      return "ingu627/exaone4.0:1.2b"
+        case .hyperclovax:  return "joonoh/HyperCLOVAX-SEED-Text-Instruct-1.5B"
+        case .kanana:       return "noire/kanana-1.5-2.1b"
         }
     }
 }
@@ -168,8 +168,8 @@ final class AppSettings: ObservableObject {
     }
 
     private init() {
-        let rawModel = defaults.string(forKey: Keys.modelSize) ?? GemmaModelSize.gemma4B.rawValue
-        self.modelSize = GemmaModelSize(rawValue: rawModel) ?? .gemma4B
+        let rawModel = defaults.string(forKey: Keys.modelSize) ?? GemmaModelSize.gemma3_4B.rawValue
+        self.modelSize = GemmaModelSize(rawValue: rawModel) ?? .gemma3_4B
         self.selectedInputDeviceUID = defaults.string(forKey: Keys.inputDeviceUID)
         self.showsOriginalText = defaults.object(forKey: Keys.showsOriginal) as? Bool ?? true
         self.overlayAutoHideSeconds = defaults.object(forKey: Keys.autoHide) as? Double ?? 4.0

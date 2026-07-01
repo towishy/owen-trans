@@ -2,6 +2,11 @@
 
 모든 주요 변경 사항을 이 파일에 기록합니다.
 
+## v0.1.24
+- 모델 리스트를 한국어 특화 경량 구성으로 교체 — **Gemma 3 4B(기본) · EXAONE 4.0 1.2B · HyperCLOVAX SEED 1.5B · Kanana 1.5 2.1B**
+- EXAONE 4.0 1.2B(LG·최신·812MB) / HyperCLOVAX SEED 1.5B(Naver) / Kanana 1.5 2.1B(Kakao) 추가 — 모두 Ollama에서 pull 가능함을 확인
+- 기존 Gemma 3 12B / Qwen 2.5 7B / EXAONE 3.5 7.8B 선택지 제거 — 저장된 설정값은 Gemma 3 4B로 자동 폴백
+
 ## v0.1.23
 - 모델 리스트를 **Gemma 3 (4B / 12B) · Qwen 2.5 7B · EXAONE 3.5 7.8B**로 복원, 기본값 **Gemma 3 4B**
 - EXAONE 3.5 2.4B 기본값(v0.1.21)은 출력이 산만해 되돌림 — 저장된 설정값은 Gemma 3 4B로 자동 폴백
