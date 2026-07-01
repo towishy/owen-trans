@@ -139,7 +139,10 @@ final class OllamaTranslator: Translator {
             return "〔모델 없음〕 ollama pull \(modelSize.ollamaTag)"
         }
         let decoded = try JSONDecoder().decode(OllamaGenerateResponse.self, from: data)
-        return Self.cleanup(decoded.response)
+        if let error = decoded.error, !error.isEmpty {
+            return Self.serverErrorMessage(error)
+        }
+        return Self.cleanup(decoded.response ?? "")
     }
 
     /// 스트리밍 번역: NDJSON 응답을 줄 단위로 읽어 누적 텍스트를 콜백으로 전달한다.
@@ -182,8 +185,14 @@ final class OllamaTranslator: Translator {
                   let chunk = try? JSONDecoder().decode(OllamaGenerateResponse.self, from: lineData) else {
                 continue
             }
-            if !chunk.response.isEmpty {
-                accumulated += chunk.response
+            // 모델 로드 실패 등 서버 오류를 조용히 삼키지 않고 사용자에게 노출한다.
+            if let error = chunk.error, !error.isEmpty {
+                let message = Self.serverErrorMessage(error)
+                onPartial(message)
+                return message
+            }
+            if let piece = chunk.response, !piece.isEmpty {
+                accumulated += piece
                 let cleaned = Self.cleanup(accumulated)
                 onPartial(cleaned)
             }
@@ -274,11 +283,22 @@ final class OllamaTranslator: Translator {
         }
         return result.trimmingCharacters(in: .whitespacesAndNewlines)
     }
+
+    /// Ollama 서버 오류(예: 모델 로드 실패)를 노치에 표시할 한 줄 메시지로 정리한다.
+    private static func serverErrorMessage(_ raw: String) -> String {
+        let firstLine = raw
+            .split(whereSeparator: \.isNewline)
+            .first
+            .map(String.init)?
+            .trimmingCharacters(in: .whitespaces) ?? raw
+        return "〔번역 오류〕 \(firstLine)"
+    }
 }
 
 private struct OllamaGenerateResponse: Decodable {
-    let response: String
+    let response: String?
     let done: Bool?
+    let error: String?
 }
 
 private struct OllamaTagsResponse: Decodable {
