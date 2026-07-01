@@ -20,12 +20,8 @@ let package = Package(
         .executable(name: "OwenTrans", targets: ["OwenTrans"])
     ],
     dependencies: [
-        // Gemma 로컬 LLM(MLX) — 전체 Xcode 설치 필요(Metal 툴체인)
-        // 참고: MLXLLM/MLXLMCommon은 mlx-swift-examples → mlx-swift-lm 으로 이동됨.
-        .package(url: "https://github.com/ml-explore/mlx-swift-lm", branch: "main"),
-        // MLXHuggingFace 매크로 확장이 참조하는 HubClient / AutoTokenizer 공급용.
-        .package(url: "https://github.com/huggingface/swift-huggingface", from: "0.9.0"),
-        .package(url: "https://github.com/huggingface/swift-transformers", from: "1.3.0"),
+        // Gemma 로컬 LLM(MLX) — 전체 Xcode 설치 후 주석 해제
+        // .package(url: "https://github.com/ml-explore/mlx-swift-examples.git", branch: "main"),
 
         // (선택) Whisper STT 로 교체하려면 주석 해제
         // .package(url: "https://github.com/argmaxinc/WhisperKit.git", from: "0.9.0"),
@@ -34,13 +30,9 @@ let package = Package(
         .executableTarget(
             name: "OwenTrans",
             dependencies: [
-                // Gemma(MLX) 인프로세스 로컬 번역 — Ollama 불필요
-                .product(name: "MLXLLM", package: "mlx-swift-lm"),
-                .product(name: "MLXLMCommon", package: "mlx-swift-lm"),
-                // 기본 다운로더/토크나이저 로더 매크로(#hubDownloader / #huggingFaceTokenizerLoader)
-                .product(name: "MLXHuggingFace", package: "mlx-swift-lm"),
-                .product(name: "HuggingFace", package: "swift-huggingface"),
-                .product(name: "Tokenizers", package: "swift-transformers"),
+                // Gemma(MLX) 활성화 시 주석 해제
+                // .product(name: "MLXLLM", package: "mlx-swift-examples"),
+                // .product(name: "MLXLMCommon", package: "mlx-swift-examples"),
 
                 // Whisper 사용 시 주석 해제
                 // .product(name: "WhisperKit", package: "WhisperKit"),

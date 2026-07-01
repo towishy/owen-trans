@@ -14,9 +14,6 @@ import Foundation
 #if canImport(MLXLLM)
 import MLXLLM
 import MLXLMCommon
-import MLXHuggingFace
-import HuggingFace
-import Tokenizers
 
 final class GemmaTranslator: Translator {
 
@@ -32,14 +29,7 @@ final class GemmaTranslator: Translator {
     func prepare() async throws {
         statusText = "\(modelSize.displayName) 로딩 중…"
         let configuration = ModelConfiguration(id: modelSize.huggingFaceRepo)
-        // MLXLLM/MLXLMCommon이 mlx-swift-lm 으로 이동하면서 loadContainer 가
-        // Downloader/TokenizerLoader 를 명시적으로 받도록 바뀜었다.
-        // 기본 HuggingFace Hub 다운로더와 AutoTokenizer 로더를 매크로로 주입한다.
-        container = try await LLMModelFactory.shared.loadContainer(
-            from: #hubDownloader(),
-            using: #huggingFaceTokenizerLoader(),
-            configuration: configuration
-        )
+        container = try await LLMModelFactory.shared.loadContainer(configuration: configuration)
         statusText = "\(modelSize.displayName) 로딩 완료"
     }
 

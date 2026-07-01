@@ -2,11 +2,15 @@
 
 모든 주요 변경 사항을 이 파일에 기록합니다.
 
-## v0.1.16
-- MLX(인프로세스 Gemma) 로컬 번역 경로 활성화 — Ollama 없이 앱 프로세스 안에서 직접 번역
+## v0.1.17
+- v0.1.16(MLX 인프로세스 Gemma) 롤백 — MDM/EDR 관리 환경에서 실행 차단 이슈로 Ollama 기반 v0.1.15 번역 경로로 복귀
+- Package.swift의 MLX 의존성(mlx-swift-lm / swift-huggingface / swift-transformers) 재비활성화, GemmaTranslator는 Ollama 경로 사용
+- 배포용 zip 생성(build-app.sh --zip) 등 v0.1.16 이후 빌드 도구 개선은 유지
+
+## v0.1.16 (철회됨 / withdrawn)
+- MLX(인프로세스 Gemma) 로컬 번역 경로 활성화 시도 — Ollama 없이 앱 프로세스 안에서 직접 번역
 - MLXLLM/MLXLMCommon 저장소 이전 대응: mlx-swift-examples → mlx-swift-lm
-- 신규 loadContainer API 대응: MLXHuggingFace 매크로(#hubDownloader / #huggingFaceTokenizerLoader)로 기본 다운로더·토크나이저 주입
-- 의존성 추가: mlx-swift-lm, swift-huggingface(HuggingFace), swift-transformers(Tokenizers)
+- 참고: ad-hoc 서명 + 인프로세스 모델 다운로드·Metal JIT 실행으로 MDM/EDR 차단 발생 → v0.1.17에서 롤백
 
 ## v0.1.15
 - 환경설정 번역 모델에 모델별 다운로드 버튼 + 설치 상태 + 진행바 추가
