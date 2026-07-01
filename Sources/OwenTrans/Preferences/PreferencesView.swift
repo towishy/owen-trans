@@ -70,11 +70,12 @@ struct PreferencesView: View {
 
             sectionHeader("번역 모델")
             VStack(alignment: .leading, spacing: 10) {
+                ollamaServerRow
                 ForEach(GemmaModelSize.allCases, id: \.self) { size in
                     modelRow(size)
                 }
                 if !modelManager.reachable {
-                    Text("Ollama 서버가 꺼져 있어 설치 상태를 확인할 수 없습니다. 설치 마법사에서 서버를 시작하세요.")
+                    Text("Ollama 서버가 꺼져 있어 설치 상태를 확인할 수 없습니다. 위 ‘시작’ 버튼으로 서버를 켜세요.")
                         .font(.nanum(11, weight: .light))
                         .foregroundStyle(.orange)
                 }
@@ -280,10 +281,51 @@ struct PreferencesView: View {
         (NSApp.delegate as? AppDelegate)?.registerGlobalHotKeys()
     }
 
+    /// Ollama 서버 상태 표시 + 시작/중지/재시작 제어 행.
+    @ViewBuilder
+    private var ollamaServerRow: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 8) {
+                Image(systemName: "circle.fill")
+                    .font(.system(size: 8))
+                    .foregroundStyle(modelManager.reachable ? .green : .secondary)
+                Text(modelManager.reachable ? "Ollama 서버 실행 중" : "Ollama 서버 꺼짐")
+                    .font(.nanum(13))
+                Spacer()
+                if modelManager.serviceBusy {
+                    ProgressView().controlSize(.small)
+                } else if modelManager.reachable {
+                    Button { Task { await modelManager.restartService() } } label: {
+                        Text("재시작").font(.nanum(11))
+                    }
+                    Button { Task { await modelManager.stopService() } } label: {
+                        Text("중지").font(.nanum(11))
+                    }
+                } else {
+                    Button { Task { await modelManager.startService() } } label: {
+                        Text("시작").font(.nanum(11))
+                    }
+                    Button { Task { await modelManager.refresh() } } label: {
+                        Text("다시 점검").font(.nanum(11))
+                    }
+                }
+            }
+            if let message = modelManager.serviceMessage {
+                Text(message)
+                    .font(.nanum(11, weight: .light))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Text("brew services 로 제어합니다. 시작하면 로그인 시 자동 실행되며 앱을 꺼도 계속 실행됩니다.")
+                .font(.nanum(11, weight: .light))
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
     /// 모델 한 줄: 라디오 선택 + 이름 + 상태/다운로드 + 진행바.
     @ViewBuilder
-    private func modelRow(_ size: GemmaModelSize) -> some View {
-        let installed = modelManager.isInstalled(size)
+    private func modelRow(_ size: GemmaModelSize) -> some View {        let installed = modelManager.isInstalled(size)
         let isDownloading = modelManager.downloading.contains(size)
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 8) {

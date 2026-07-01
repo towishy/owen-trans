@@ -19,6 +19,10 @@ final class OllamaModelManager: ObservableObject {
     @Published private(set) var downloading: Set<GemmaModelSize> = []
     /// Ollama 서버 실행 여부.
     @Published private(set) var reachable = false
+    /// brew services 서버 제어(시작/중지/재시작) 진행 중.
+    @Published private(set) var serviceBusy = false
+    /// 마지막 서버 제어 결과 메시지.
+    @Published private(set) var serviceMessage: String?
 
     private init() {
         let config = URLSessionConfiguration.default
@@ -94,6 +98,68 @@ final class OllamaModelManager: ObservableObject {
             await refresh()
         } catch {
             progress[size] = "다운로드 실패: \(error.localizedDescription)"
+        }
+    }
+
+    // MARK: - 서버 제어 (brew services)
+
+    /// Ollama 서버 시작(brew services start ollama).
+    func startService() async { await controlService("start", expectRunning: true) }
+    /// Ollama 서버 중지(brew services stop ollama).
+    func stopService() async { await controlService("stop", expectRunning: false) }
+    /// Ollama 서버 재시작(brew services restart ollama).
+    func restartService() async { await controlService("restart", expectRunning: true) }
+
+    /// `brew services <action> ollama` 을 실행하고 상태를 갱신한다.
+    private func controlService(_ action: String, expectRunning: Bool) async {
+        guard !serviceBusy else { return }
+        serviceBusy = true
+        serviceMessage = nil
+        defer { serviceBusy = false }
+
+        let (code, output) = await runShell("brew services \(action) ollama")
+        if code != 0 {
+            let detail = output.isEmpty ? "brew services \(action) ollama (코드 \(code))" : output
+            serviceMessage = "실패: \(detail)"
+            await refresh()
+            return
+        }
+
+        // 상태 반영 대기(기동 또는 종료까지 최대 ~10초).
+        for _ in 0..<20 {
+            if await isReachable() == expectRunning { break }
+            try? await Task.sleep(nanoseconds: 500_000_000)
+        }
+        await refresh()
+        if expectRunning {
+            serviceMessage = reachable ? "Ollama 서버 실행 중" : "서버가 시작되지 않았습니다 — Homebrew·Ollama 설치를 확인하세요."
+        } else {
+            serviceMessage = reachable ? "서버가 아직 응답합니다 — 잠시 후 다시 확인하세요." : "Ollama 서버 중지됨"
+        }
+    }
+
+    /// 로그인 셸(-l)로 명령을 실행해 brew PATH를 확보한다. (종료코드, 출력) 반환.
+    private func runShell(_ command: String) async -> (Int32, String) {
+        await withCheckedContinuation { (continuation: CheckedContinuation<(Int32, String), Never>) in
+            DispatchQueue.global(qos: .userInitiated).async {
+                let process = Process()
+                process.executableURL = URL(fileURLWithPath: "/bin/zsh")
+                process.arguments = ["-lc", command]
+                let pipe = Pipe()
+                process.standardOutput = pipe
+                process.standardError = pipe
+                do {
+                    try process.run()
+                    // 파이프 deadlock 방지: EOF까지 읽은 뒤 종료 대기.
+                    let data = pipe.fileHandleForReading.readDataToEndOfFile()
+                    process.waitUntilExit()
+                    let text = String(data: data, encoding: .utf8)?
+                        .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                    continuation.resume(returning: (process.terminationStatus, text))
+                } catch {
+                    continuation.resume(returning: (-1, error.localizedDescription))
+                }
+            }
         }
     }
 

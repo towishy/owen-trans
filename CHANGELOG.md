@@ -2,6 +2,10 @@
 
 모든 주요 변경 사항을 이 파일에 기록합니다.
 
+## v0.1.18
+- 환경설정 ‘번역 모델’에 Ollama 서버 제어 추가 — 서버 상태 표시 + 시작/중지/재시작/다시 점검 버튼(brew services)
+- 이제 터미널 없이 앱에서 직접 Ollama 서버를 켜고 끕 수 있음
+
 ## v0.1.17
 - v0.1.16(MLX 인프로세스 Gemma) 롤백 — MDM/EDR 관리 환경에서 실행 차단 이슈로 Ollama 기반 v0.1.15 번역 경로로 복귀
 - Package.swift의 MLX 의존성(mlx-swift-lm / swift-huggingface / swift-transformers) 재비활성화, GemmaTranslator는 Ollama 경로 사용
