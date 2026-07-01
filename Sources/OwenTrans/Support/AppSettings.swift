@@ -3,15 +3,19 @@ import Combine
 
 /// 모델 선택지(번역 LLM).
 enum GemmaModelSize: String, CaseIterable, Codable {
+    case exaone2_4B = "exaone3.5-2.4b"
+    case exaone7_8B = "exaone3.5-7.8b"
     case gemmaE2B = "gemma4-e2b"
     case gemmaE4B = "gemma4-e4b"
     case gemma12B = "gemma4-12b"
 
     var displayName: String {
         switch self {
+        case .exaone2_4B: return "EXAONE 3.5 · 2.4B (한국어 특화·빠름·권장)"
+        case .exaone7_8B: return "EXAONE 3.5 · 7.8B (한국어 특화·정확)"
         case .gemmaE2B: return "Gemma 4 · E2B (가장 가벼움)"
-        case .gemmaE4B: return "Gemma 4 · E4B (기본·권장)"
-        case .gemma12B: return "Gemma 4 · 12B (정확)"
+        case .gemmaE4B: return "Gemma 4 · E4B"
+        case .gemma12B: return "Gemma 4 · 12B (정확·느림)"
         }
     }
 
@@ -19,6 +23,8 @@ enum GemmaModelSize: String, CaseIterable, Codable {
     /// (MLX 인프로세스 경로는 현재 비활성 — Ollama 경로 사용 시엔 참조되지 않음)
     var huggingFaceRepo: String {
         switch self {
+        case .exaone2_4B: return "mlx-community/EXAONE-3.5-2.4B-Instruct-4bit"
+        case .exaone7_8B: return "mlx-community/EXAONE-3.5-7.8B-Instruct-4bit"
         case .gemmaE2B: return "mlx-community/gemma-4-e2b-it-4bit"
         case .gemmaE4B: return "mlx-community/gemma-4-e4b-it-4bit"
         case .gemma12B: return "mlx-community/gemma-4-12b-it-4bit"
@@ -28,6 +34,8 @@ enum GemmaModelSize: String, CaseIterable, Codable {
     /// Ollama 모델 태그. OllamaTranslator 에서 사용.
     var ollamaTag: String {
         switch self {
+        case .exaone2_4B: return "exaone3.5:2.4b"
+        case .exaone7_8B: return "exaone3.5:7.8b"
         case .gemmaE2B: return "gemma4:e2b"
         case .gemmaE4B: return "gemma4:e4b"
         case .gemma12B: return "gemma4:12b"
@@ -164,8 +172,8 @@ final class AppSettings: ObservableObject {
     }
 
     private init() {
-        let rawModel = defaults.string(forKey: Keys.modelSize) ?? GemmaModelSize.gemmaE4B.rawValue
-        self.modelSize = GemmaModelSize(rawValue: rawModel) ?? .gemmaE4B
+        let rawModel = defaults.string(forKey: Keys.modelSize) ?? GemmaModelSize.exaone2_4B.rawValue
+        self.modelSize = GemmaModelSize(rawValue: rawModel) ?? .exaone2_4B
         self.selectedInputDeviceUID = defaults.string(forKey: Keys.inputDeviceUID)
         self.showsOriginalText = defaults.object(forKey: Keys.showsOriginal) as? Bool ?? true
         self.overlayAutoHideSeconds = defaults.object(forKey: Keys.autoHide) as? Double ?? 4.0
