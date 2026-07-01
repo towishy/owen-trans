@@ -4,7 +4,7 @@ import Foundation
 ///
 /// 전체 Xcode(MLX) 없이도 **실제 Gemma 로컬 번역**을 사용할 수 있는 경로다.
 /// - 로컬 데몬: `http://localhost:11434` (ollama serve)
-/// - 모델: `gemma3:4b` / `gemma3:12b`
+/// - 모델: `gemma4:e2b` / `gemma4:e4b` / `gemma4:12b`
 ///
 /// 데몬이 없거나 모델이 없으면 사용자에게 안내 메시지를 반환한다.
 final class OllamaTranslator: Translator {
