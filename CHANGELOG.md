@@ -2,6 +2,12 @@
 
 모든 주요 변경 사항을 이 파일에 기록합니다.
 
+## v0.1.16
+- MLX(인프로세스 Gemma) 로컬 번역 경로 활성화 — Ollama 없이 앱 프로세스 안에서 직접 번역
+- MLXLLM/MLXLMCommon 저장소 이전 대응: mlx-swift-examples → mlx-swift-lm
+- 신규 loadContainer API 대응: MLXHuggingFace 매크로(#hubDownloader / #huggingFaceTokenizerLoader)로 기본 다운로더·토크나이저 주입
+- 의존성 추가: mlx-swift-lm, swift-huggingface(HuggingFace), swift-transformers(Tokenizers)
+
 ## v0.1.15
 - 환경설정 번역 모델에 모델별 다운로드 버튼 + 설치 상태 + 진행바 추가
 - OllamaModelManager: /api/tags 설치 확인, /api/pull 스트리밍 다운로드·진행률
