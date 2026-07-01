@@ -16,6 +16,11 @@ final class SpeechRecognizerService {
     private var request: SFSpeechAudioBufferRecognitionRequest?
     private var task: SFSpeechRecognitionTask?
 
+    /// 현재 세션이 온디바이스 인식을 사용 중인지.
+    private var usingOnDevice = false
+    /// 온디바이스 인식 실패로 서버 인식에 폴백했는지(1회, 인스턴스 수명 동안 유지).
+    private var didFallbackToServer = false
+
     /// 음성 인식 권한 요청.
     static func requestAuthorization(_ completion: @escaping (Bool) -> Void) {
         SFSpeechRecognizer.requestAuthorization { status in
@@ -35,9 +40,10 @@ final class SpeechRecognizerService {
         let request = SFSpeechAudioBufferRecognitionRequest()
         request.shouldReportPartialResults = true
         // 가능한 기기에서는 온디바이스 인식 우선(프라이버시·지연시간).
-        if recognizer?.supportsOnDeviceRecognition == true {
-            request.requiresOnDeviceRecognition = true
-        }
+        // 단, 온디바이스가 실패해 서버로 폴백한 뒤에는 다시 서버 인식을 사용한다.
+        let onDevice = !didFallbackToServer && (recognizer?.supportsOnDeviceRecognition == true)
+        request.requiresOnDeviceRecognition = onDevice
+        usingOnDevice = onDevice
         self.request = request
 
         task = recognizer?.recognitionTask(with: request) { [weak self] result, error in
@@ -47,6 +53,13 @@ final class SpeechRecognizerService {
                 self.onTranscript?(text, result.isFinal)
             }
             if let error {
+                // 온디바이스 인식이 실패하면 1회에 한해 서버 인식으로 재시작한다.
+                if self.usingOnDevice && !self.didFallbackToServer {
+                    self.didFallbackToServer = true
+                    NSLog("[OwenTrans] 온디바이스 인식 실패 → 서버 인식으로 폴백: \(error.localizedDescription)")
+                    DispatchQueue.main.async { [weak self] in self?.start() }
+                    return
+                }
                 self.onError?(error)
             }
         }

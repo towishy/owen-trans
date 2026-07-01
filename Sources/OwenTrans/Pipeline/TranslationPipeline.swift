@@ -214,9 +214,10 @@ final class TranslationPipeline {
         do {
             return try await translator.translateStream(text, direction: .enToKo, context: context, onPartial: onPartial)
         } catch {
-            // 일시 오류면 한 번 더 시도.
+            // 일시 오류면 한 번 더 시도. 재시도 시에는 partial 콜백을 무시해
+            // 오버레이가 처음부터 다시 채워지며 깜빡이는 것을 막고 최종 결과만 반영한다.
             try? await Task.sleep(nanoseconds: 400_000_000)
-            return try await translator.translateStream(text, direction: .enToKo, context: context, onPartial: onPartial)
+            return try await translator.translateStream(text, direction: .enToKo, context: context, onPartial: { _ in })
         }
     }
 

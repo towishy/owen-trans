@@ -15,6 +15,10 @@ final class OllamaTranslator: Translator {
     private var modelSize: GemmaModelSize
     private(set) var statusText: String
 
+    /// 헬스체크(/api/version) 결과를 짧게 캐시해 발화마다 왕복하는 것을 막는다.
+    private var reachableCache: (value: Bool, at: Date)?
+    private let reachableTTL: TimeInterval = 3
+
     init(modelSize: GemmaModelSize) {
         self.modelSize = modelSize
         let config = URLSessionConfiguration.default
@@ -146,7 +150,7 @@ final class OllamaTranslator: Translator {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return "" }
 
-        guard await isReachable() else {
+        guard await isReachable(useCache: true) else {
             let message = "〔Ollama 미실행〕 brew services start ollama"
             onPartial(message)
             return message
@@ -169,6 +173,8 @@ final class OllamaTranslator: Translator {
             onPartial(message)
             return message
         }
+        // generate 응답이 온 시점엔 서버가 확실히 살아있으므로 캐시를 갱신한다.
+        reachableCache = (true, Date())
 
         var accumulated = ""
         for try await line in bytes.lines {
@@ -188,14 +194,22 @@ final class OllamaTranslator: Translator {
 
     // MARK: - Helpers
 
-    private func isReachable() async -> Bool {
+    private func isReachable(useCache: Bool = false) async -> Bool {
+        if useCache, let cache = reachableCache,
+           Date().timeIntervalSince(cache.at) < reachableTTL {
+            return cache.value
+        }
         var request = URLRequest(url: baseURL.appendingPathComponent("api/version"))
         request.timeoutInterval = 2
-        guard let (_, response) = try? await session.data(for: request),
-              let http = response as? HTTPURLResponse else {
-            return false
+        let ok: Bool
+        if let (_, response) = try? await session.data(for: request),
+           let http = response as? HTTPURLResponse {
+            ok = http.statusCode == 200
+        } else {
+            ok = false
         }
-        return http.statusCode == 200
+        reachableCache = (ok, Date())
+        return ok
     }
 
     private func installedModels() async -> [String] {
@@ -250,10 +264,15 @@ final class OllamaTranslator: Translator {
     }
 
     private static func cleanup(_ text: String) -> String {
-        text
-            .replacingOccurrences(of: "Korean:", with: "")
-            .replacingOccurrences(of: "English:", with: "")
-            .trimmingCharacters(in: .whitespacesAndNewlines)
+        // 스트리밍 중 매 청크마다 호출되므로, 접두어가 실제로 있을 때만 치환한다.
+        var result = text
+        if result.contains("Korean:") {
+            result = result.replacingOccurrences(of: "Korean:", with: "")
+        }
+        if result.contains("English:") {
+            result = result.replacingOccurrences(of: "English:", with: "")
+        }
+        return result.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }
 
