@@ -66,9 +66,14 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     }
 
     // 메뉴를 열 때마다 현재 상태로 다시 구성한다.
+    // 그룹 구성:  ① 번역 제어 · 상태  ② 도구(입력창·기록)  ③ 설정(장치·모델·환경설정·설치)  ④ 앱(정보·업데이트)  ⑤ 종료
     func menuNeedsUpdate(_ menu: NSMenu) {
         menu.removeAllItems()
 
+        // ── ① 번역 제어 ──────────────────────────────
+        addSectionHeader(to: menu, "번역")
+        // 시작/정지 단축키(전역 핫키)를 힌트로 표시. 실제 동작은 전역 핫키가 처리한다.
+        let translateHint = hotkeyHint(code: settings.hotKeyTranslateCode, mods: settings.hotKeyTranslateMods)
         if pipeline.isRunning {
             // 일시정지 / 재개
             let pause = NSMenuItem(title: "", action: #selector(togglePause), keyEquivalent: "")
@@ -76,16 +81,16 @@ final class StatusItemController: NSObject, NSMenuDelegate {
             pause.applyNanumTitle(pipeline.isPaused ? "재개" : "일시정지", weight: .bold)
             menu.addItem(pause)
 
-            // 번역 종료
+            // 번역 종료 (시작/정지 단축키가 토글)
             let stop = NSMenuItem(title: "", action: #selector(stopTranslation), keyEquivalent: "")
             stop.target = self
-            stop.applyNanumTitle("번역 종료", weight: .bold)
+            stop.applyNanumTitle("번역 종료", weight: .bold, shortcut: translateHint)
             menu.addItem(stop)
         } else {
             // 번역 시작
             let startItem = NSMenuItem(title: "", action: #selector(startTranslation), keyEquivalent: "")
             startItem.target = self
-            startItem.applyNanumTitle("번역 시작", weight: .bold)
+            startItem.applyNanumTitle("번역 시작", weight: .bold, shortcut: translateHint)
             menu.addItem(startItem)
         }
 
@@ -97,26 +102,15 @@ final class StatusItemController: NSObject, NSMenuDelegate {
 
         menu.addItem(.separator())
 
-        // 입력 장치 서브메뉴
-        let deviceItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
-        deviceItem.applyNanumTitle("입력 장치")
-        deviceItem.submenu = makeInputDeviceMenu()
-        menu.addItem(deviceItem)
-
-        // 모델 서브메뉴
-        let modelItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
-        modelItem.applyNanumTitle("번역 모델")
-        modelItem.submenu = makeModelMenu()
-        menu.addItem(modelItem)
-
-        menu.addItem(.separator())
-
-        menu.addItem(.separator())
+        // ── ② 도구 ──────────────────────────────────
+        addSectionHeader(to: menu, "도구")
 
         // 한글 → 영어 플로팅 입력창
         let composer = NSMenuItem(title: "", action: #selector(toggleComposer), keyEquivalent: "")
         composer.target = self
-        composer.applyNanumTitle("번역 입력창 (한→영)")
+        composer.applyNanumTitle("번역 입력창 (한→영)",
+                                 shortcut: hotkeyHint(code: settings.hotKeyComposerCode,
+                                                      mods: settings.hotKeyComposerMods))
         menu.addItem(composer)
 
         // 번역 기록 보기
@@ -125,17 +119,44 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         history.applyNanumTitle("번역 기록 보기")
         menu.addItem(history)
 
-        // 설치 마법사
-        let setup = NSMenuItem(title: "", action: #selector(openSetup), keyEquivalent: "")
-        setup.target = self
-        setup.applyNanumTitle("설치 마법사…")
-        menu.addItem(setup)
+        menu.addItem(.separator())
+
+        // ── ③ 설정 ──────────────────────────────────
+        addSectionHeader(to: menu, "설정")
+
+        // 입력 장치 서브메뉴 (부제로 현재 선택 표시)
+        let devices = AudioInputManager.availableInputDevices()
+        let currentDeviceName = settings.selectedInputDeviceUID
+            .flatMap { uid in devices.first { $0.uid == uid }?.name } ?? "시스템 기본 입력"
+        let deviceItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
+        deviceItem.applyNanumTitle("입력 장치")
+        if #available(macOS 14.4, *) { deviceItem.subtitle = currentDeviceName }
+        deviceItem.submenu = makeInputDeviceMenu(devices)
+        menu.addItem(deviceItem)
+
+        // 모델 서브메뉴 (부제로 현재 선택 표시)
+        let modelItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
+        modelItem.applyNanumTitle("번역 모델")
+        if #available(macOS 14.4, *) { modelItem.subtitle = settings.modelSize.displayName }
+        modelItem.submenu = makeModelMenu()
+        menu.addItem(modelItem)
 
         // 환경설정
         let prefs = NSMenuItem(title: "", action: #selector(openPreferences), keyEquivalent: ",")
         prefs.target = self
         prefs.applyNanumTitle("환경설정…")
         menu.addItem(prefs)
+
+        // 설치 마법사
+        let setup = NSMenuItem(title: "", action: #selector(openSetup), keyEquivalent: "")
+        setup.target = self
+        setup.applyNanumTitle("설치 마법사…")
+        menu.addItem(setup)
+
+        menu.addItem(.separator())
+
+        // ── ④ 앱 ────────────────────────────────────
+        addSectionHeader(to: menu, "앱")
 
         // 앱 정보
         let about = NSMenuItem(title: "", action: #selector(openAbout), keyEquivalent: "")
@@ -151,14 +172,25 @@ final class StatusItemController: NSObject, NSMenuDelegate {
 
         menu.addItem(.separator())
 
-        // 종료
+        // ── ⑤ 종료 ──────────────────────────────────
         let quit = NSMenuItem(title: "", action: #selector(quit), keyEquivalent: "q")
         quit.target = self
         quit.applyNanumTitle("OwenTrans 종료")
         menu.addItem(quit)
     }
 
-    private func makeInputDeviceMenu() -> NSMenu {
+    /// 그룹 상단에 표시하는 네이티브 섹션 헤더(macOS 14+).
+    private func addSectionHeader(to menu: NSMenu, _ title: String) {
+        menu.addItem(.sectionHeader(title: title))
+    }
+
+    /// 유효한 단축키면 "⌥⌘T" 힌트 문자열, 아니면 nil.
+    private func hotkeyHint(code: Int, mods: Int) -> String? {
+        guard HotKeyFormatter.isValid(keyCode: code, modifiers: mods) else { return nil }
+        return HotKeyFormatter.string(keyCode: code, modifiers: mods)
+    }
+
+    private func makeInputDeviceMenu(_ devices: [AudioInputManager.Device]) -> NSMenu {
         let submenu = NSMenu()
 
         let systemDefault = NSMenuItem(title: "", action: #selector(selectDefaultDevice), keyEquivalent: "")
@@ -167,7 +199,6 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         systemDefault.state = (settings.selectedInputDeviceUID == nil) ? .on : .off
         submenu.addItem(systemDefault)
 
-        let devices = AudioInputManager.availableInputDevices()
         if !devices.isEmpty { submenu.addItem(.separator()) }
 
         for device in devices {

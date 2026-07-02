@@ -56,14 +56,37 @@ struct PreferencesView: View {
                 Text("용어집 — 한 줄에 `원문=번역` (고정 번역)")
                     .font(.nanum(12, weight: .light))
                     .foregroundStyle(.secondary)
-                TextEditor(text: $settings.glossaryText)
-                    .font(.system(size: 12, design: .monospaced))
-                    .frame(height: 64)
-                    .padding(4)
-                    .background(RoundedRectangle(cornerRadius: 6).fill(Color(nsColor: .textBackgroundColor).opacity(0.6)))
-                Text("예) Hyundai=현대자동차")
-                    .font(.nanum(11, weight: .light))
-                    .foregroundStyle(.secondary)
+                ZStack(alignment: .topLeading) {
+                    TextEditor(text: $settings.glossaryText)
+                        .font(.system(size: 12, design: .monospaced))
+                        .scrollContentBackground(.hidden)
+                        .frame(height: 72)
+                        .padding(6)
+                        .background(RoundedRectangle(cornerRadius: 8).fill(Color(nsColor: .textBackgroundColor).opacity(0.6)))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .strokeBorder(Color.secondary.opacity(0.35), lineWidth: 1)
+                        )
+                    if settings.glossaryText.isEmpty {
+                        Text("Hyundai=현대자동차\nSeoul=서울")
+                            .font(.system(size: 12, design: .monospaced))
+                            .foregroundStyle(.secondary.opacity(0.45))
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 13)
+                            .allowsHitTesting(false)
+                    }
+                }
+                HStack {
+                    Text("예) Hyundai=현대자동차")
+                        .font(.nanum(11, weight: .light))
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    if !glossaryStatusText.isEmpty {
+                        Text(glossaryStatusText)
+                            .font(.nanum(11, weight: .light))
+                            .foregroundStyle(glossaryHasError ? .orange : .secondary)
+                    }
+                }
             }
 
             Divider()
@@ -145,7 +168,7 @@ struct PreferencesView: View {
                     previewNotch()
                 }
                 Text("\(Int(settings.notchWidth))")
-                    .font(.nanum(12, weight: .light)).frame(width: 44, alignment: .trailing)
+                    .font(.nanum(12, weight: .light)).frame(width: 48, alignment: .trailing)
             }
             .onChange(of: settings.notchWidth) { _, _ in previewNotch() }
             Text("가로는 이 값으로 고정됩니다(동적 리사이즈 없음). 세로는 최대 3줄까지 표시.")
@@ -156,12 +179,12 @@ struct PreferencesView: View {
                 Text("노치 글자 크기").font(.nanum(13)).frame(width: 90, alignment: .leading)
                 Slider(value: $settings.notchFontSize, in: 12...26) { _ in previewNotch() }
                 Text("\(Int(settings.notchFontSize))pt")
-                    .font(.nanum(12, weight: .light)).frame(width: 44, alignment: .trailing)
+                    .font(.nanum(12, weight: .light)).frame(width: 48, alignment: .trailing)
             }
             .onChange(of: settings.notchFontSize) { _, _ in previewNotch() }
 
             HStack {
-                Text("자동 숨김").font(.nanum(13))
+                Text("자동 숨김").font(.nanum(13)).frame(width: 90, alignment: .leading)
                 Slider(value: $settings.overlayAutoHideSeconds, in: 0...10, step: 0.5)
                 Text(settings.overlayAutoHideSeconds == 0
                      ? "안 함"
@@ -223,8 +246,12 @@ struct PreferencesView: View {
                         .padding(.horizontal, 8)
                         .padding(.vertical, 5)
                         .background(
-                            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
                                 .fill(Color(nsColor: .textBackgroundColor).opacity(0.6))
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .strokeBorder(Color.secondary.opacity(0.35), lineWidth: 1)
                         )
                     Button { chooseSaveFolder() } label: {
                         Text("폴더 선택…").font(.nanum(12))
@@ -258,6 +285,31 @@ struct PreferencesView: View {
             launchAtLogin = LoginItem.isEnabled
             Task { await modelManager.refresh() }
         }
+    }
+
+    /// 용어집 인식 상태 텍스트(유효 쌍 개수 / 형식 오류 줄 경고).
+    private var glossaryStatusText: String {
+        let lineCount = glossaryNonEmptyLineCount
+        guard lineCount > 0 else { return "" }
+        let valid = settings.glossaryPairs.count
+        let invalid = lineCount - valid
+        if invalid > 0 {
+            return "\(valid)개 인식 · \(invalid)개 형식 오류"
+        }
+        return "\(valid)개 용어 인식됨"
+    }
+
+    /// 형식 오류(= 없는 줄 등)가 있는지.
+    private var glossaryHasError: Bool {
+        glossaryNonEmptyLineCount > settings.glossaryPairs.count
+    }
+
+    /// 공백만 있는 줄을 제외한 유효 입력 줄 수.
+    private var glossaryNonEmptyLineCount: Int {
+        settings.glossaryText
+            .split(separator: "\n", omittingEmptySubsequences: false)
+            .filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+            .count
     }
 
     private func copyInstallCommand() {

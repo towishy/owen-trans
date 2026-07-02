@@ -72,10 +72,35 @@ enum FontProvider {
 
 extension NSMenuItem {
     /// 나눔스퀘어 폰트를 적용한 메뉴 항목 제목.
-    func applyNanumTitle(_ title: String, weight: FontProvider.Weight = .regular) {
-        let attrs: [NSAttributedString.Key: Any] = [
-            .font: FontProvider.nanum(13, weight: weight)
-        ]
-        self.attributedTitle = NSAttributedString(string: title, attributes: attrs)
+    /// `shortcut` 을 주면 우측에 흐린 단축키 힌트(비기능·표시 전용)를 함께 렌더한다.
+    func applyNanumTitle(_ title: String,
+                         weight: FontProvider.Weight = .regular,
+                         size: CGFloat = 13,
+                         shortcut: String? = nil) {
+        guard let shortcut, !shortcut.isEmpty else {
+            self.attributedTitle = NSAttributedString(
+                string: title,
+                attributes: [.font: FontProvider.nanum(size, weight: weight)]
+            )
+            return
+        }
+        let paragraph = NSMutableParagraphStyle()
+        paragraph.tabStops = [NSTextTab(textAlignment: .right, location: 240)]
+        let result = NSMutableAttributedString(
+            string: title,
+            attributes: [
+                .font: FontProvider.nanum(size, weight: weight),
+                .paragraphStyle: paragraph
+            ]
+        )
+        result.append(NSAttributedString(
+            string: "\t" + shortcut,
+            attributes: [
+                .font: FontProvider.nanum(size - 1, weight: .light),
+                .foregroundColor: NSColor.secondaryLabelColor,
+                .paragraphStyle: paragraph
+            ]
+        ))
+        self.attributedTitle = result
     }
 }
